@@ -1,0 +1,1994 @@
+This is a proposal for a minimal log-facilitation package that
+provides modules with a standard log API while leaving the choice of
+log framework and configuration to the application.
+
+TOO MANY WAYS TO LOG
+
+It seems as if every CPAN module has its own way of logging debug
+information and error conditions. For example:
+
+   * LWP - activate by use'ing LWP::Debug; outputs to STDERR
+   * DBI - activate by calling DBI->trace(); outputs to STDERR or a
+file
+   * Rose::DB - activate by setting various $Debug package variables;
+outputs to STDERR
+   * Encode::* - activate by modifying various DEBUG subroutines to
+return 1; outputs using warn()
+   * Apache::* - activate by setting the Apache log level and
+restarting; outputs to the Apache logs
+
+In addition, many CPAN modules do not log anything at all, possibly
+because they don't want to invent another logging mechanism or become
+dependent on an existing one.
+
+This situation is pretty much the opposite of what I want when
+developing a large application. I want a single way to turn logging on
+and off, and to control where logs get sent, for all of the modules
+I'm using.
+
+This being Perl, there are many fine logging frameworks available:
+Log::Log4perl, Log::Dispatch, Log::Handler, Log::Agent, Log::Trivial,
+etc. So why do CPAN modules eschew the use of these and invent their
+own mechanisms that are almost guaranteed to be less powerful?
+
+   * The very existence of so many logging modules means that there is
+no one standard that a CPAN author would feel comfortable binding
+their users to. As usual, TMTOWTDI is a double-edged sword.
+
+   * A logging framework can be a significant dependency for a module
+to have, easily dwarfing the size of the module itself. For small
+modules that want to minimize dependencies, depending on Log4perl (for
+example) is a non-starter.
+
+A COMMON LOG API
+
+One thing to notice is that while the logging frameworks all differ in
+their configuration and activation API, and the set of features they
+support, the API to log messages is generally quite simple. At its
+core it consists of
+
+   * A set of valid log levels, e.g. debug, info, warn, error, fatal
+
+   * Methods to log a message at a particular level, e.g. $log->debug()
+
+   * Methods to determine if a particular level is activated, e.g.
+$log->is_debug()
+
+I expect most CPAN modules would happily stick to this API, and let
+the application worry about configuring what's getting logged and
+where it's going. Therefore...
+
+PROPOSED MODULE: LOG::ANY
+
+I propose a small module called Log::Any that provides this API, with
+no dependencies and no logging implementation of its own. Log::Any
+would be designed to be linked by the main application to an existing
+logging framework.
+
+A CPAN module would use it like this:
+
+    package Foo;
+    use Log::Any;
+    my $log = Log::Any->get_logger(category => __PACKAGE__);
+
+    $log->debug("a debug message")
+        if $log->is_debug();
+
+    $log->error("yikes!");
+
+By default, methods like $log->debug would be no-ops, and methods like
+$log->is_debug() would return false.
+
+As a convenient shorthand, you can use
+
+    package Foo;
+    use Log::Any qw($log);
+
+    $log->debug("a debug message")
+        if $log->is_debug();
+
+where $log is a newly created logger object, initialized with the
+package name of the caller and imported as a package-scoped variable.
+
+An application that wished to activate logging would call Log::Any-
+>set_logger with a single argument: a subroutine that takes a log
+
+category and returns a logger object implementing the standard logging
+API above. The log category is typically the class doing the logging,
+and it may be ignored.
+
+For example, to link with Log::Log4perl:
+
+    use Log::Any;
+    use Log::Log4perl;
+
+    Log::Log4perl->init("log.conf");
+    Log::Any->set_logger(sub { Log::Log4perl->get_logger(@_) });
+
+To link with Log::Dispatch, with all categories going to the screen:
+
+    use Log::Any;
+    use Log::Dispatch;
+
+    my $dispatcher = Log::Dispatch::Screen->new(...);
+    Log::Any->set_logger(sub { $dispatcher });
+
+To link with Log::Dispatch, with different categories going to
+different dispatchers:
+
+    use Log::Any;
+    use Log::Dispatch;
+
+    my $dispatcher_screen = Log::Dispatch::Screen->new(...);
+    my $dispatcher_file   = Log::Dispatch::File->new(...);
+
+    sub choose_dispatcher {
+        my $category = shift;
+        return $category =~ /DBI|LWP/ ? $dispatcher_file :
+$dispatcher_screen;
+    }
+    Log::Any->set_logger(\&choose_dispatcher);
+
+set_logger will be implemented so as to take effect on all existing as
+well as future loggers. Any $log objects already created inside
+modules will automatically be switched when set_logger is called.
+(i.e. $log will probably be a thin proxy object.) This avoids imposing
+any order on module loading, and allows set_logger to be called more
+than once per application.
+
+PROMOTING USE
+
+For Log::Any to be useful, a substantial number of modules -
+especially major modules - would have to adopt its use. Fortunately,
+with its minimal footprint and standalone nature, authors should not
+find Log::Any a difficult dependency to add. Existing logging
+mechanisms, such as LWP::Debug and $DBI::tfh, could easily be
+converted to write *both* to their existing output streams and to
+Log::Any. This would preserve backward compatibility for existing
+applications, but allow new applications to benefit from more powerful
+logging. I would be willing to submit such patches to major module
+authors to get things going.
+
+MODULE NAME
+
+Other potential names for this module:
+   * Log::Service
+   * Log::Proxy
+   * Log::API
+
+However, since many log frameworks themselves have similar "generic"
+names (e.g. Log::Dispatcher), I felt that Log::Any was the most
+distinct.
+
+FEEDBACK?
+
+Feedback is most welcome. Thanks!
+
+Jon
+
+    Reply to author    Forward  
+		
+		
+		
+You must Sign in before you can post messages.
+To post a message you must first join this group.
+Please update your nickname on the subscription settings page before posting.
+You do not have the permission required to post.
+	
+		
+John Siracusa   	
+View profile
+	 More options Sep 6, 5:58 pm
+Newsgroups: perl.module-authors
+From: sirac...@gmail.com (John Siracusa)
+Date: Thu, 06 Sep 2007 21:58:42 -0400
+Local: Thurs, Sep 6 2007 5:58 pm
+Subject: Re: Module Proposal: Log::Any
+Reply to author | Forward | Print | Individual message | Show original | Report this message | Find messages by this author
+On 9/6/07 4:14 PM, swa...@pobox.com wrote:
+
+> So why do CPAN modules eschew the use of these and invent their
+> own mechanisms that are almost guaranteed to be less powerful?
+
+I agree with all your listed reason, but I think you missed one: minimum
+overhead.  Ideally, logging would disappear entirely from the code path when
+disabled.  Perl being Perl, this is rarely possible, but that doesn't mean
+the other extreme--at least one method call per log line--is suddenly
+attractive.  Here's a brief microbench showing the range of overhead for
+disabled logging:
+
+package A;
+sub a { 0 }
+sub c() { 0 }
+our $Debug = 0;
+
+package main;
+use Benchmark qw(cmpthese);
+my $o = bless {}, 'A';
+cmpthese(10000000, {
+  method => sub { $o->a  && $o->a },
+  sub    => sub { A::a() && $o->a },
+  var    => sub { $A::Debug && $o->a },
+  #const => sub { A::c() && $o->a },
+
+});
+
+             Rate method    sub    var
+method  1176471/s     --   -13%   -92%
+sub     1349528/s    15%     --   -91%
+var    15625000/s  1228%  1058%     --
+
+As you can see, though sub vs. method is a small difference for the best
+case (sub and method both returning a constant 0), the $Debug && ... case
+beats it by enough to be significant.
+
+(I commented out the constant case because it's best case, as close as Perl
+can come to actual code removal (depending on where/when the constant sub is
+defined).)
+
+So I guess what I'm saying is that the final thing that would stop me from
+using Log::Any "everywhere" (meaning also in performance-critical code) is
+the overhead for the common (production) case of logging being entirely
+disabled.  How about providing all three methods of checking as part of the
+API?
+
+    $log->debug(...)  if $log->is_debug();      # method
+    $log->debug(...)  if Log::Any::is_debug();  # sub
+    $log->debug(...)  if $Log::Any::Is_Debug;   # var
+
+Yes, a backend (maybe the default/built-in backend, in fact) could chose to
+implement the sub by calling a method and the var with a tie, negating a lot
+of the performance benefit, but at least the door is open for a simple
+backend to implement the var and sub directly, yielding the full benefit.
+
+-John
+
+    Reply to author    Forward  
+		
+		
+		
+You must Sign in before you can post messages.
+To post a message you must first join this group.
+Please update your nickname on the subscription settings page before posting.
+You do not have the permission required to post.
+	
+		
+Nadim Khemir   	
+View profile
+	 More options Sep 7, 9:12 am
+Newsgroups: perl.module-authors
+From: na...@khemir.net (Nadim Khemir)
+Date: Fri, 7 Sep 2007 19:12:46 +0200
+Local: Fri, Sep 7 2007 9:12 am
+Subject: Re: Module Proposal: Log::Any
+Reply to author | Forward | Print | Individual message | Show original | Report this message | Find messages by this author
+Source filters can be a solution. very little overhead. I wrote
+Filter::Uncomment just for that.
+
+On Friday 07 September 2007 03:58, John Siracusa wrote:
+
+- Hide quoted text -
+- Show quoted text -
+> On 9/6/07 4:14 PM, swa...@pobox.com wrote:
+> > So why do CPAN modules eschew the use of these and invent their
+> > own mechanisms that are almost guaranteed to be less powerful?
+
+> I agree with all your listed reason, but I think you missed one: minimum
+> overhead.  Ideally, logging would disappear entirely from the code path
+> when disabled.  Perl being Perl, this is rarely possible, but that doesn't
+> mean the other extreme--at least one method call per log line--is suddenly
+> attractive.  Here's a brief microbench showing the range of overhead for
+> disabled logging:
+
+> package A;
+> sub a { 0 }
+> sub c() { 0 }
+> our $Debug = 0;
+
+> package main;
+> use Benchmark qw(cmpthese);
+> my $o = bless {}, 'A';
+> cmpthese(10000000, {
+>   method => sub { $o->a  && $o->a },
+>   sub    => sub { A::a() && $o->a },
+>   var    => sub { $A::Debug && $o->a },
+>   #const => sub { A::c() && $o->a },
+> });
+
+>              Rate method    sub    var
+> method  1176471/s     --   -13%   -92%
+> sub     1349528/s    15%     --   -91%
+> var    15625000/s  1228%  1058%     --
+
+> As you can see, though sub vs. method is a small difference for the best
+> case (sub and method both returning a constant 0), the $Debug && ... case
+> beats it by enough to be significant.
+
+> (I commented out the constant case because it's best case, as close as Perl
+> can come to actual code removal (depending on where/when the constant sub
+> is defined).)
+
+> So I guess what I'm saying is that the final thing that would stop me from
+> using Log::Any "everywhere" (meaning also in performance-critical code) is
+> the overhead for the common (production) case of logging being entirely
+> disabled.  How about providing all three methods of checking as part of the
+> API?
+
+>     $log->debug(...)  if $log->is_debug();      # method
+>     $log->debug(...)  if Log::Any::is_debug();  # sub
+>     $log->debug(...)  if $Log::Any::Is_Debug;   # var
+
+> Yes, a backend (maybe the default/built-in backend, in fact) could chose to
+> implement the sub by calling a method and the var with a tie, negating a
+> lot of the performance benefit, but at least the door is open for a simple
+> backend to implement the var and sub directly, yielding the full benefit.
+
+> -John
+
+
+    Reply to author    Forward  
+		
+		
+		
+You must Sign in before you can post messages.
+To post a message you must first join this group.
+Please update your nickname on the subscription settings page before posting.
+You do not have the permission required to post.
+	
+		
+Bill Ward   	
+View profile
+	 More options Sep 7, 9:27 am
+Newsgroups: perl.module-authors
+From: b...@wards.net (Bill Ward)
+Date: Fri, 7 Sep 2007 10:27:13 -0700
+Local: Fri, Sep 7 2007 9:27 am
+Subject: Re: Module Proposal: Log::Any
+Reply to author | Forward | Print | Individual message | Show original | Report this message | Find messages by this author
+I like the concept of this, but I think to be successfull you need
+buy-in from the various log package authors as well as more than a few
+core module authors.  The name Log::Any sounds as good as any (har
+har) but in this case, I think naming is the least of your worries.
+
+On 9/6/07, swa...@pobox.com <swa...@pobox.com> wrote:
+
+- Hide quoted text -
+- Show quoted text -
+> This is a proposal for a minimal log-facilitation package that
+> provides modules with a standard log API while leaving the choice of
+> log framework and configuration to the application.
+
+> TOO MANY WAYS TO LOG
+
+> It seems as if every CPAN module has its own way of logging debug
+> information and error conditions. For example:
+
+>    * LWP - activate by use'ing LWP::Debug; outputs to STDERR
+>    * DBI - activate by calling DBI->trace(); outputs to STDERR or a
+> file
+>    * Rose::DB - activate by setting various $Debug package variables;
+> outputs to STDERR
+>    * Encode::* - activate by modifying various DEBUG subroutines to
+> return 1; outputs using warn()
+>    * Apache::* - activate by setting the Apache log level and
+> restarting; outputs to the Apache logs
+
+> In addition, many CPAN modules do not log anything at all, possibly
+> because they don't want to invent another logging mechanism or become
+> dependent on an existing one.
+
+> This situation is pretty much the opposite of what I want when
+> developing a large application. I want a single way to turn logging on
+> and off, and to control where logs get sent, for all of the modules
+> I'm using.
+
+> This being Perl, there are many fine logging frameworks available:
+> Log::Log4perl, Log::Dispatch, Log::Handler, Log::Agent, Log::Trivial,
+> etc. So why do CPAN modules eschew the use of these and invent their
+> own mechanisms that are almost guaranteed to be less powerful?
+
+>    * The very existence of so many logging modules means that there is
+> no one standard that a CPAN author would feel comfortable binding
+> their users to. As usual, TMTOWTDI is a double-edged sword.
+
+>    * A logging framework can be a significant dependency for a module
+> to have, easily dwarfing the size of the module itself. For small
+> modules that want to minimize dependencies, depending on Log4perl (for
+> example) is a non-starter.
+
+> A COMMON LOG API
+
+> One thing to notice is that while the logging frameworks all differ in
+> their configuration and activation API, and the set of features they
+> support, the API to log messages is generally quite simple. At its
+> core it consists of
+
+>    * A set of valid log levels, e.g. debug, info, warn, error, fatal
+
+>    * Methods to log a message at a particular level, e.g. $log-
+> >debug()
+
+>    * Methods to determine if a particular level is activated, e.g.
+> $log->is_debug()
+
+> I expect most CPAN modules would happily stick to this API, and let
+> the application worry about configuring what's getting logged and
+> where it's going. Therefore...
+
+> PROPOSED MODULE: LOG::ANY
+
+> I propose a small module called Log::Any that provides this API, with
+> no dependencies and no logging implementation of its own. Log::Any
+> would be designed to be linked by the main application to an existing
+> logging framework.
+
+> A CPAN module would use it like this:
+
+>     package Foo;
+>     use Log::Any;
+>     my $log = Log::Any->get_logger(category => __PACKAGE__);
+
+>     $log->debug("a debug message")
+>         if $log->is_debug();
+
+>     $log->error("yikes!");
+
+> By default, methods like $log->debug would be no-ops, and methods like
+> $log->is_debug() would return false.
+
+> As a convenient shorthand, you can use
+
+>     package Foo;
+>     use Log::Any qw($log);
+
+>     $log->debug("a debug message")
+>         if $log->is_debug();
+
+> where $log is a newly created logger object, initialized with the
+> package name of the caller and imported as a package-scoped variable.
+
+> An application that wished to activate logging would call Log::Any-
+> >set_logger with a single argument: a subroutine that takes a log
+> category and returns a logger object implementing the standard logging
+> API above. The log category is typically the class doing the logging,
+> and it may be ignored.
+
+> For example, to link with Log::Log4perl:
+
+>     use Log::Any;
+>     use Log::Log4perl;
+
+>     Log::Log4perl->init("log.conf");
+>     Log::Any->set_logger(sub { Log::Log4perl->get_logger(@_) });
+
+> To link with Log::Dispatch, with all categories going to the screen:
+
+>     use Log::Any;
+>     use Log::Dispatch;
+
+>     my $dispatcher = Log::Dispatch::Screen->new(...);
+>     Log::Any->set_logger(sub { $dispatcher });
+
+> To link with Log::Dispatch, with different categories going to
+> different dispatchers:
+
+>     use Log::Any;
+>     use Log::Dispatch;
+
+>     my $dispatcher_screen = Log::Dispatch::Screen->new(...);
+>     my $dispatcher_file   = Log::Dispatch::File->new(...);
+
+>     sub choose_dispatcher {
+>         my $category = shift;
+>         return $category =~ /DBI|LWP/ ? $dispatcher_file :
+> $dispatcher_screen;
+>     }
+>     Log::Any->set_logger(\&choose_dispatcher);
+
+> set_logger will be implemented so as to take effect on all existing as
+> well as future loggers. Any $log objects already created inside
+> modules will automatically be switched when set_logger is called.
+> (i.e. $log will probably be a thin proxy object.) This avoids imposing
+> any order on module loading, and allows set_logger to be called more
+> than once per application.
+
+> PROMOTING USE
+
+> For Log::Any to be useful, a substantial number of modules -
+> especially major modules - would have to adopt its use. Fortunately,
+> with its minimal footprint and standalone nature, authors should not
+> find Log::Any a difficult dependency to add. Existing logging
+> mechanisms, such as LWP::Debug and $DBI::tfh, could easily be
+> converted to write *both* to their existing output streams and to
+> Log::Any. This would preserve backward compatibility for existing
+> applications, but allow new applications to benefit from more powerful
+> logging. I would be willing to submit such patches to major module
+> authors to get things going.
+
+> MODULE NAME
+
+> Other potential names for this module:
+>    * Log::Service
+>    * Log::Proxy
+>    * Log::API
+
+> However, since many log frameworks themselves have similar "generic"
+> names (e.g. Log::Dispatcher), I felt that Log::Any was the most
+> distinct.
+
+> FEEDBACK?
+
+> Feedback is most welcome. Thanks!
+
+> Jon
+
+
+    Reply to author    Forward  
+		
+		
+		
+You must Sign in before you can post messages.
+To post a message you must first join this group.
+Please update your nickname on the subscription settings page before posting.
+You do not have the permission required to post.
+	
+		
+Bill Ward   	
+View profile
+	 More options Sep 7, 11:30 am
+Newsgroups: perl.module-authors
+From: b...@wards.net (Bill Ward)
+Date: Fri, 7 Sep 2007 12:30:27 -0700
+Local: Fri, Sep 7 2007 11:30 am
+Subject: Re: Module Proposal: Log::Any
+Reply to author | Forward | Print | Individual message | Show original | Report this message | Find messages by this author
+"Abstract" has two meanings, so I think that could be confusing.  I
+think Log::Any is better.
+
+On 9/7/07, Jonathan Swartz <swa...@pobox.com> wrote:
+
+- Hide quoted text -
+- Show quoted text -
+> That is very true. That is why I'd volunteer to patch the major
+> modules in a backwards-compatible way.
+
+> Incidentally, this is also being commented on here:
+
+>      http://use.perl.org/~jonswar/journal/34366
+
+> and the name Log::Abstract was suggested, which I like a lot more, so
+> I'm leaning towards that now.
+
+> Thanks for your feedback,
+> Jon
+
+> On Sep 7, 2007, at 10:27 AM, Bill Ward wrote:
+
+> > I like the concept of this, but I think to be successfull you need
+> > buy-in from the various log package authors as well as more than a few
+> > core module authors.  The name Log::Any sounds as good as any (har
+> > har) but in this case, I think naming is the least of your worries.
+
+> > On 9/6/07, swa...@pobox.com <swa...@pobox.com> wrote:
+> >> This is a proposal for a minimal log-facilitation package that
+> >> provides modules with a standard log API while leaving the choice of
+> >> log framework and configuration to the application.
+
+> >> TOO MANY WAYS TO LOG
+
+> >> It seems as if every CPAN module has its own way of logging debug
+> >> information and error conditions. For example:
+
+> >>    * LWP - activate by use'ing LWP::Debug; outputs to STDERR
+> >>    * DBI - activate by calling DBI->trace(); outputs to STDERR or a
+> >> file
+> >>    * Rose::DB - activate by setting various $Debug package variables;
+> >> outputs to STDERR
+> >>    * Encode::* - activate by modifying various DEBUG subroutines to
+> >> return 1; outputs using warn()
+> >>    * Apache::* - activate by setting the Apache log level and
+> >> restarting; outputs to the Apache logs
+
+> >> In addition, many CPAN modules do not log anything at all, possibly
+> >> because they don't want to invent another logging mechanism or become
+> >> dependent on an existing one.
+
+> >> This situation is pretty much the opposite of what I want when
+> >> developing a large application. I want a single way to turn
+> >> logging on
+> >> and off, and to control where logs get sent, for all of the modules
+> >> I'm using.
+
+> >> This being Perl, there are many fine logging frameworks available:
+> >> Log::Log4perl, Log::Dispatch, Log::Handler, Log::Agent, Log::Trivial,
+> >> etc. So why do CPAN modules eschew the use of these and invent their
+> >> own mechanisms that are almost guaranteed to be less powerful?
+
+> >>    * The very existence of so many logging modules means that
+> >> there is
+> >> no one standard that a CPAN author would feel comfortable binding
+> >> their users to. As usual, TMTOWTDI is a double-edged sword.
+
+> >>    * A logging framework can be a significant dependency for a module
+> >> to have, easily dwarfing the size of the module itself. For small
+> >> modules that want to minimize dependencies, depending on Log4perl
+> >> (for
+> >> example) is a non-starter.
+
+> >> A COMMON LOG API
+
+> >> One thing to notice is that while the logging frameworks all
+> >> differ in
+> >> their configuration and activation API, and the set of features they
+> >> support, the API to log messages is generally quite simple. At its
+> >> core it consists of
+
+> >>    * A set of valid log levels, e.g. debug, info, warn, error, fatal
+
+> >>    * Methods to log a message at a particular level, e.g. $log-
+> >>> debug()
+
+> >>    * Methods to determine if a particular level is activated, e.g.
+> >> $log->is_debug()
+
+> >> I expect most CPAN modules would happily stick to this API, and let
+> >> the application worry about configuring what's getting logged and
+> >> where it's going. Therefore...
+
+> >> PROPOSED MODULE: LOG::ANY
+
+> >> I propose a small module called Log::Any that provides this API, with
+> >> no dependencies and no logging implementation of its own. Log::Any
+> >> would be designed to be linked by the main application to an existing
+> >> logging framework.
+
+> >> A CPAN module would use it like this:
+
+> >>     package Foo;
+> >>     use Log::Any;
+> >>     my $log = Log::Any->get_logger(category => __PACKAGE__);
+
+> >>     $log->debug("a debug message")
+> >>         if $log->is_debug();
+
+> >>     $log->error("yikes!");
+
+> >> By default, methods like $log->debug would be no-ops, and methods
+> >> like
+> >> $log->is_debug() would return false.
+
+> >> As a convenient shorthand, you can use
+
+> >>     package Foo;
+> >>     use Log::Any qw($log);
+
+> >>     $log->debug("a debug message")
+> >>         if $log->is_debug();
+
+> >> where $log is a newly created logger object, initialized with the
+> >> package name of the caller and imported as a package-scoped variable.
+
+> >> An application that wished to activate logging would call Log::Any-
+> >>> set_logger with a single argument: a subroutine that takes a log
+> >> category and returns a logger object implementing the standard
+> >> logging
+> >> API above. The log category is typically the class doing the logging,
+> >> and it may be ignored.
+
+> >> For example, to link with Log::Log4perl:
+
+> >>     use Log::Any;
+> >>     use Log::Log4perl;
+
+> >>     Log::Log4perl->init("log.conf");
+> >>     Log::Any->set_logger(sub { Log::Log4perl->get_logger(@_) });
+
+> >> To link with Log::Dispatch, with all categories going to the screen:
+
+> >>     use Log::Any;
+> >>     use Log::Dispatch;
+
+> >>     my $dispatcher = Log::Dispatch::Screen->new(...);
+> >>     Log::Any->set_logger(sub { $dispatcher });
+
+> >> To link with Log::Dispatch, with different categories going to
+> >> different dispatchers:
+
+> >>     use Log::Any;
+> >>     use Log::Dispatch;
+
+> >>     my $dispatcher_screen = Log::Dispatch::Screen->new(...);
+> >>     my $dispatcher_file   = Log::Dispatch::File->new(...);
+
+> >>     sub choose_dispatcher {
+> >>         my $category = shift;
+> >>         return $category =~ /DBI|LWP/ ? $dispatcher_file :
+> >> $dispatcher_screen;
+> >>     }
+> >>     Log::Any->set_logger(\&choose_dispatcher);
+
+> >> set_logger will be implemented so as to take effect on all
+> >> existing as
+> >> well as future loggers. Any $log objects already created inside
+> >> modules will automatically be switched when set_logger is called.
+> >> (i.e. $log will probably be a thin proxy object.) This avoids
+> >> imposing
+> >> any order on module loading, and allows set_logger to be called more
+> >> than once per application.
+
+> >> PROMOTING USE
+
+> >> For Log::Any to be useful, a substantial number of modules -
+> >> especially major modules - would have to adopt its use. Fortunately,
+> >> with its minimal footprint and standalone nature, authors should not
+> >> find Log::Any a difficult dependency to add. Existing logging
+> >> mechanisms, such as LWP::Debug and $DBI::tfh, could easily be
+> >> converted to write *both* to their existing output streams and to
+> >> Log::Any. This would preserve backward compatibility for existing
+> >> applications, but allow new applications to benefit from more
+> >> powerful
+> >> logging. I would be willing to submit such patches to major module
+> >> authors to get things going.
+
+> >> MODULE NAME
+
+> >> Other potential names for this module:
+> >>    * Log::Service
+> >>    * Log::Proxy
+> >>    * Log::API
+
+> >> However, since many log frameworks themselves have similar "generic"
+> >> names (e.g. Log::Dispatcher), I felt that Log::Any was the most
+> >> distinct.
+
+> >> FEEDBACK?
+
+> >> Feedback is most welcome. Thanks!
+
+> >> Jon
+
+
+    Reply to author    Forward  
+		
+		
+		
+You must Sign in before you can post messages.
+To post a message you must first join this group.
+Please update your nickname on the subscription settings page before posting.
+You do not have the permission required to post.
+	
+		
+Eric Wilhelm   	
+View profile
+	 More options Sep 7, 12:09 pm
+Newsgroups: perl.module-authors
+From: scratchcomput...@gmail.com (Eric Wilhelm)
+Date: Fri, 7 Sep 2007 13:09:24 -0700
+Local: Fri, Sep 7 2007 12:09 pm
+Subject: Re: Module Proposal: Log::Any
+Reply to author | Forward | Print | Individual message | Show original | Report this message | Find messages by this author
+# from John Siracusa
+# on Thursday 06 September 2007 06:58 pm:
+
+>On 9/6/07 4:14 PM, swa...@pobox.com wrote:
+>> So why do CPAN modules eschew the use of these and invent their
+>> own mechanisms that are almost guaranteed to be less powerful?
+
+>I agree with all your listed reason, but I think you missed one:
+> minimum overhead.  Ideally, logging would disappear entirely from the
+> code path when disabled.  
+
+Agreed.  Most modules are small enough that the author has decided to
+completely disable any debugging code (via a constant or just deleting
+it) before it gets to CPAN.
+
+> Perl being Perl, this is rarely possible,
+> but that doesn't mean the other extreme--at least one method call per
+> log line--is suddenly attractive.
+
+Also agreed.  Barring magic, no logger is going to be universally
+accepted (and of course, for some authors, the very presence of "magic"
+means it won't be accepted.)
+
+That doesn't mean that you can't add logging as needed for your large
+applications.  But why do you need to control logging in some other
+module?  (In production code?)
+
+If your goal is simply to save authors the trouble of inventing their
+own logger, another module is maybe not the answer.  Education isn't
+easy, but I'll guess that is mostly what is lacking.  (Isn't it
+always?)
+
+As large applications go, there are always various policy (e.g. we
+install a $SIG{__WARN__}) and workaround issues (such as
+Log::Log4perl's inability to load a module from PAR due to a failed
+reimplementation of eval {require()}.)
+
+  http://svn.dotreader.com/svn/dotreader/trunk/lib/dtRdr/Logger.pm
+
+It would be nice to be able to simply subclass a straightforward,
+efficient, easily/cleanly configurable, and powerful logging module.  
+If you write it, I will use it.
+
+> Here's a brief microbench showing
+> the range of overhead for disabled logging:
+>...
+>(I commented out the constant case because it's best case, as close as
+> Perl can come to actual code removal (depending on where/when the
+> constant sub is defined).)
+
+The "code not there" (constant) case is *insanely* faster.  I'll take
+that one in my production code please.
+
+Perhaps a core hack would enable it to be turned on and off within a
+long-running process?  Which reminds me: universal acceptance is also
+contingent on being compatible with perl 1.0 (well, something
+ridiculously old like 5.6.2.)  Tough crowd, eh? :-D
+
+Cue discussion of imaginary versions of perl5 such as 5.i.0.  Mine will
+cleanly cross-compile all of CPAN onto linux-MIPS as soon as I finish
+ExtUtils::MakeMaker v5.i.1 ;-)
+
+--Eric
+-- 
+"It ain't those parts of the Bible that I can't understand that
+bother me, it's the parts that I do understand."
+--Mark Twain
+---------------------------------------------------
+    http://scratchcomputing.com
+---------------------------------------------------
+
+    Reply to author    Forward  
+		
+		
+		
+You must Sign in before you can post messages.
+To post a message you must first join this group.
+Please update your nickname on the subscription settings page before posting.
+You do not have the permission required to post.
+	
+		
+A. Pagaltzis   	
+View profile
+	 More options Sep 7, 1:22 pm
+Newsgroups: perl.module-authors
+From: pagalt...@gmx.de (A. Pagaltzis)
+Date: Fri, 7 Sep 2007 23:22:12 +0200
+Local: Fri, Sep 7 2007 1:22 pm
+Subject: Re: Module Proposal: Log::Any
+Reply to author | Forward | Print | Individual message | Show original | Report this message | Find messages by this author
+* John Siracusa <sirac...@gmail.com> [2007-09-07 13:15]:
+
+> Ideally, logging would disappear entirely from the code path
+> when disabled. Perl being Perl, this is rarely possible,
+
+Will be easy in 5.10, coming Any Day Now.
+
+FWIW…
+
+Regards,
+-- 
+Aristotle Pagaltzis // <http://plasmasturm.org/>
+
+    Reply to author    Forward  
+		
+		
+		
+You must Sign in before you can post messages.
+To post a message you must first join this group.
+Please update your nickname on the subscription settings page before posting.
+You do not have the permission required to post.
+	
+		
+Smylers   	
+View profile
+	 More options Sep 7, 4:18 pm
+Newsgroups: perl.module-authors
+From: Smyl...@stripey.com (Smylers)
+Date: Sat, 8 Sep 2007 01:18:12 +0100
+Local: Fri, Sep 7 2007 4:18 pm
+Subject: Re: Module Proposal: Log::Any
+Reply to author | Forward | Print | Individual message | Show original | Report this message | Find messages by this author
+
+A. Pagaltzis writes:
+> * John Siracusa <sirac...@gmail.com> [2007-09-07 13:15]:
+
+> > Ideally, logging would disappear entirely from the code path
+> > when disabled. Perl being Perl, this is rarely possible,
+
+> Will be easy in 5.10
+
+Is that still the case?  The most recent development release has this in
+its changelog:
+
+  The assertions pragma, its submodules assertions::activate and
+  assertions::compat and the -A command-line switch have been removed.
+  The interface was not judged mature enough for inclusion in a stable
+  release.
+
+    -- http://search.cpan.org/~rgarcia/perl-5.9.5/pod/perl595delta.pod#Modul...
+
+Smylers
+
+    Reply to author    Forward  
+		
+		
+		
+You must Sign in before you can post messages.
+To post a message you must first join this group.
+Please update your nickname on the subscription settings page before posting.
+You do not have the permission required to post.
+	
+		
+Jonathan Swartz   	
+View profile
+	 More options Sep 7, 10:57 am
+Newsgroups: perl.module-authors
+From: swa...@pobox.com (Jonathan Swartz)
+Date: Fri, 7 Sep 2007 11:57:12 -0700
+Local: Fri, Sep 7 2007 10:57 am
+Subject: Re: Module Proposal: Log::Any
+Reply to author | Forward | Print | Individual message | Show original | Report this message | Find messages by this author
+That is very true. That is why I'd volunteer to patch the major  
+modules in a backwards-compatible way.
+
+Incidentally, this is also being commented on here:
+
+     http://use.perl.org/~jonswar/journal/34366
+
+and the name Log::Abstract was suggested, which I like a lot more, so  
+I'm leaning towards that now.
+
+Thanks for your feedback,
+Jon
+
+On Sep 7, 2007, at 10:27 AM, Bill Ward wrote:
+
+- Hide quoted text -
+- Show quoted text -
+> I like the concept of this, but I think to be successfull you need
+> buy-in from the various log package authors as well as more than a few
+> core module authors.  The name Log::Any sounds as good as any (har
+> har) but in this case, I think naming is the least of your worries.
+
+> On 9/6/07, swa...@pobox.com <swa...@pobox.com> wrote:
+>> This is a proposal for a minimal log-facilitation package that
+>> provides modules with a standard log API while leaving the choice of
+>> log framework and configuration to the application.
+
+>> TOO MANY WAYS TO LOG
+
+>> It seems as if every CPAN module has its own way of logging debug
+>> information and error conditions. For example:
+
+>>    * LWP - activate by use'ing LWP::Debug; outputs to STDERR
+>>    * DBI - activate by calling DBI->trace(); outputs to STDERR or a
+>> file
+>>    * Rose::DB - activate by setting various $Debug package variables;
+>> outputs to STDERR
+>>    * Encode::* - activate by modifying various DEBUG subroutines to
+>> return 1; outputs using warn()
+>>    * Apache::* - activate by setting the Apache log level and
+>> restarting; outputs to the Apache logs
+
+>> In addition, many CPAN modules do not log anything at all, possibly
+>> because they don't want to invent another logging mechanism or become
+>> dependent on an existing one.
+
+>> This situation is pretty much the opposite of what I want when
+>> developing a large application. I want a single way to turn  
+>> logging on
+>> and off, and to control where logs get sent, for all of the modules
+>> I'm using.
+
+>> This being Perl, there are many fine logging frameworks available:
+>> Log::Log4perl, Log::Dispatch, Log::Handler, Log::Agent, Log::Trivial,
+>> etc. So why do CPAN modules eschew the use of these and invent their
+>> own mechanisms that are almost guaranteed to be less powerful?
+
+>>    * The very existence of so many logging modules means that  
+>> there is
+>> no one standard that a CPAN author would feel comfortable binding
+>> their users to. As usual, TMTOWTDI is a double-edged sword.
+
+>>    * A logging framework can be a significant dependency for a module
+>> to have, easily dwarfing the size of the module itself. For small
+>> modules that want to minimize dependencies, depending on Log4perl  
+>> (for
+>> example) is a non-starter.
+
+>> A COMMON LOG API
+
+>> One thing to notice is that while the logging frameworks all  
+>> differ in
+>> their configuration and activation API, and the set of features they
+>> support, the API to log messages is generally quite simple. At its
+>> core it consists of
+
+>>    * A set of valid log levels, e.g. debug, info, warn, error, fatal
+
+>>    * Methods to log a message at a particular level, e.g. $log-
+>>> debug()
+
+>>    * Methods to determine if a particular level is activated, e.g.
+>> $log->is_debug()
+
+>> I expect most CPAN modules would happily stick to this API, and let
+>> the application worry about configuring what's getting logged and
+>> where it's going. Therefore...
+
+>> PROPOSED MODULE: LOG::ANY
+
+>> I propose a small module called Log::Any that provides this API, with
+>> no dependencies and no logging implementation of its own. Log::Any
+>> would be designed to be linked by the main application to an existing
+>> logging framework.
+
+>> A CPAN module would use it like this:
+
+>>     package Foo;
+>>     use Log::Any;
+>>     my $log = Log::Any->get_logger(category => __PACKAGE__);
+
+>>     $log->debug("a debug message")
+>>         if $log->is_debug();
+
+>>     $log->error("yikes!");
+
+>> By default, methods like $log->debug would be no-ops, and methods  
+>> like
+>> $log->is_debug() would return false.
+
+>> As a convenient shorthand, you can use
+
+>>     package Foo;
+>>     use Log::Any qw($log);
+
+>>     $log->debug("a debug message")
+>>         if $log->is_debug();
+
+>> where $log is a newly created logger object, initialized with the
+>> package name of the caller and imported as a package-scoped variable.
+
+>> An application that wished to activate logging would call Log::Any-
+>>> set_logger with a single argument: a subroutine that takes a log
+>> category and returns a logger object implementing the standard  
+>> logging
+>> API above. The log category is typically the class doing the logging,
+>> and it may be ignored.
+
+>> For example, to link with Log::Log4perl:
+
+>>     use Log::Any;
+>>     use Log::Log4perl;
+
+>>     Log::Log4perl->init("log.conf");
+>>     Log::Any->set_logger(sub { Log::Log4perl->get_logger(@_) });
+
+>> To link with Log::Dispatch, with all categories going to the screen:
+
+>>     use Log::Any;
+>>     use Log::Dispatch;
+
+>>     my $dispatcher = Log::Dispatch::Screen->new(...);
+>>     Log::Any->set_logger(sub { $dispatcher });
+
+>> To link with Log::Dispatch, with different categories going to
+>> different dispatchers:
+
+>>     use Log::Any;
+>>     use Log::Dispatch;
+
+>>     my $dispatcher_screen = Log::Dispatch::Screen->new(...);
+>>     my $dispatcher_file   = Log::Dispatch::File->new(...);
+
+>>     sub choose_dispatcher {
+>>         my $category = shift;
+>>         return $category =~ /DBI|LWP/ ? $dispatcher_file :
+>> $dispatcher_screen;
+>>     }
+>>     Log::Any->set_logger(\&choose_dispatcher);
+
+>> set_logger will be implemented so as to take effect on all  
+>> existing as
+>> well as future loggers. Any $log objects already created inside
+>> modules will automatically be switched when set_logger is called.
+>> (i.e. $log will probably be a thin proxy object.) This avoids  
+>> imposing
+>> any order on module loading, and allows set_logger to be called more
+>> than once per application.
+
+>> PROMOTING USE
+
+>> For Log::Any to be useful, a substantial number of modules -
+>> especially major modules - would have to adopt its use. Fortunately,
+>> with its minimal footprint and standalone nature, authors should not
+>> find Log::Any a difficult dependency to add. Existing logging
+>> mechanisms, such as LWP::Debug and $DBI::tfh, could easily be
+>> converted to write *both* to their existing output streams and to
+>> Log::Any. This would preserve backward compatibility for existing
+>> applications, but allow new applications to benefit from more  
+>> powerful
+>> logging. I would be willing to submit such patches to major module
+>> authors to get things going.
+
+>> MODULE NAME
+
+>> Other potential names for this module:
+>>    * Log::Service
+>>    * Log::Proxy
+>>    * Log::API
+
+>> However, since many log frameworks themselves have similar "generic"
+>> names (e.g. Log::Dispatcher), I felt that Log::Any was the most
+>> distinct.
+
+>> FEEDBACK?
+
+>> Feedback is most welcome. Thanks!
+
+>> Jon
+
+
+    Reply to author    Forward  
+		
+		
+		
+You must Sign in before you can post messages.
+To post a message you must first join this group.
+Please update your nickname on the subscription settings page before posting.
+You do not have the permission required to post.
+	
+		
+Jonathan Swartz   	
+View profile
+	 More options Sep 7, 11:39 am
+Newsgroups: perl.module-authors
+From: swa...@pobox.com (Jonathan Swartz)
+Date: Fri, 7 Sep 2007 12:39:17 -0700
+Local: Fri, Sep 7 2007 11:39 am
+Subject: Re: Module Proposal: Log::Any
+Reply to author | Forward | Print | Individual message | Show original | Report this message | Find messages by this author
+Ok, noted. The ::Abstract suffix does have some precedence in other  
+CPAN modules, which was what ultimately convinced me. Log::Any seems  
+to have turned a number of people off. I'm still open to other names.
+
+On Sep 7, 2007, at 12:30 PM, Bill Ward wrote:
+
+- Hide quoted text -
+- Show quoted text -
+> "Abstract" has two meanings, so I think that could be confusing.  I
+> think Log::Any is better.
+
+> On 9/7/07, Jonathan Swartz <swa...@pobox.com> wrote:
+>> That is very true. That is why I'd volunteer to patch the major
+>> modules in a backwards-compatible way.
+
+>> Incidentally, this is also being commented on here:
+
+>>      http://use.perl.org/~jonswar/journal/34366
+
+>> and the name Log::Abstract was suggested, which I like a lot more, so
+>> I'm leaning towards that now.
+
+>> Thanks for your feedback,
+>> Jon
+
+>> On Sep 7, 2007, at 10:27 AM, Bill Ward wrote:
+
+>>> I like the concept of this, but I think to be successfull you need
+>>> buy-in from the various log package authors as well as more than  
+>>> a few
+>>> core module authors.  The name Log::Any sounds as good as any (har
+>>> har) but in this case, I think naming is the least of your worries.
+
+>>> On 9/6/07, swa...@pobox.com <swa...@pobox.com> wrote:
+>>>> This is a proposal for a minimal log-facilitation package that
+>>>> provides modules with a standard log API while leaving the  
+>>>> choice of
+>>>> log framework and configuration to the application.
+
+>>>> TOO MANY WAYS TO LOG
+
+>>>> It seems as if every CPAN module has its own way of logging debug
+>>>> information and error conditions. For example:
+
+>>>>    * LWP - activate by use'ing LWP::Debug; outputs to STDERR
+>>>>    * DBI - activate by calling DBI->trace(); outputs to STDERR or a
+>>>> file
+>>>>    * Rose::DB - activate by setting various $Debug package  
+>>>> variables;
+>>>> outputs to STDERR
+>>>>    * Encode::* - activate by modifying various DEBUG subroutines to
+>>>> return 1; outputs using warn()
+>>>>    * Apache::* - activate by setting the Apache log level and
+>>>> restarting; outputs to the Apache logs
+
+>>>> In addition, many CPAN modules do not log anything at all, possibly
+>>>> because they don't want to invent another logging mechanism or  
+>>>> become
+>>>> dependent on an existing one.
+
+>>>> This situation is pretty much the opposite of what I want when
+>>>> developing a large application. I want a single way to turn
+>>>> logging on
+>>>> and off, and to control where logs get sent, for all of the modules
+>>>> I'm using.
+
+>>>> This being Perl, there are many fine logging frameworks available:
+>>>> Log::Log4perl, Log::Dispatch, Log::Handler, Log::Agent,  
+>>>> Log::Trivial,
+>>>> etc. So why do CPAN modules eschew the use of these and invent  
+>>>> their
+>>>> own mechanisms that are almost guaranteed to be less powerful?
+
+>>>>    * The very existence of so many logging modules means that
+>>>> there is
+>>>> no one standard that a CPAN author would feel comfortable binding
+>>>> their users to. As usual, TMTOWTDI is a double-edged sword.
+
+>>>>    * A logging framework can be a significant dependency for a  
+>>>> module
+>>>> to have, easily dwarfing the size of the module itself. For small
+>>>> modules that want to minimize dependencies, depending on Log4perl
+>>>> (for
+>>>> example) is a non-starter.
+
+>>>> A COMMON LOG API
+
+>>>> One thing to notice is that while the logging frameworks all
+>>>> differ in
+>>>> their configuration and activation API, and the set of features  
+>>>> they
+>>>> support, the API to log messages is generally quite simple. At its
+>>>> core it consists of
+
+>>>>    * A set of valid log levels, e.g. debug, info, warn, error,  
+>>>> fatal
+
+>>>>    * Methods to log a message at a particular level, e.g. $log-
+>>>>> debug()
+
+>>>>    * Methods to determine if a particular level is activated, e.g.
+>>>> $log->is_debug()
+
+>>>> I expect most CPAN modules would happily stick to this API, and let
+>>>> the application worry about configuring what's getting logged and
+>>>> where it's going. Therefore...
+
+>>>> PROPOSED MODULE: LOG::ANY
+
+>>>> I propose a small module called Log::Any that provides this API,  
+>>>> with
+>>>> no dependencies and no logging implementation of its own. Log::Any
+>>>> would be designed to be linked by the main application to an  
+>>>> existing
+>>>> logging framework.
+
+>>>> A CPAN module would use it like this:
+
+>>>>     package Foo;
+>>>>     use Log::Any;
+>>>>     my $log = Log::Any->get_logger(category => __PACKAGE__);
+
+>>>>     $log->debug("a debug message")
+>>>>         if $log->is_debug();
+
+>>>>     $log->error("yikes!");
+
+>>>> By default, methods like $log->debug would be no-ops, and methods
+>>>> like
+>>>> $log->is_debug() would return false.
+
+>>>> As a convenient shorthand, you can use
+
+>>>>     package Foo;
+>>>>     use Log::Any qw($log);
+
+>>>>     $log->debug("a debug message")
+>>>>         if $log->is_debug();
+
+>>>> where $log is a newly created logger object, initialized with the
+>>>> package name of the caller and imported as a package-scoped  
+>>>> variable.
+
+>>>> An application that wished to activate logging would call Log::Any-
+>>>>> set_logger with a single argument: a subroutine that takes a log
+>>>> category and returns a logger object implementing the standard
+>>>> logging
+>>>> API above. The log category is typically the class doing the  
+>>>> logging,
+>>>> and it may be ignored.
+
+>>>> For example, to link with Log::Log4perl:
+
+>>>>     use Log::Any;
+>>>>     use Log::Log4perl;
+
+>>>>     Log::Log4perl->init("log.conf");
+>>>>     Log::Any->set_logger(sub { Log::Log4perl->get_logger(@_) });
+
+>>>> To link with Log::Dispatch, with all categories going to the  
+>>>> screen:
+
+>>>>     use Log::Any;
+>>>>     use Log::Dispatch;
+
+>>>>     my $dispatcher = Log::Dispatch::Screen->new(...);
+>>>>     Log::Any->set_logger(sub { $dispatcher });
+
+>>>> To link with Log::Dispatch, with different categories going to
+>>>> different dispatchers:
+
+>>>>     use Log::Any;
+>>>>     use Log::Dispatch;
+
+>>>>     my $dispatcher_screen = Log::Dispatch::Screen->new(...);
+>>>>     my $dispatcher_file   = Log::Dispatch::File->new(...);
+
+>>>>     sub choose_dispatcher {
+>>>>         my $category = shift;
+>>>>         return $category =~ /DBI|LWP/ ? $dispatcher_file :
+>>>> $dispatcher_screen;
+>>>>     }
+>>>>     Log::Any->set_logger(\&choose_dispatcher);
+
+>>>> set_logger will be implemented so as to take effect on all
+>>>> existing as
+>>>> well as future loggers. Any $log objects already created inside
+>>>> modules will automatically be switched when set_logger is called.
+>>>> (i.e. $log will probably be a thin proxy object.) This avoids
+>>>> imposing
+>>>> any order on module loading, and allows set_logger to be called  
+>>>> more
+>>>> than once per application.
+
+>>>> PROMOTING USE
+
+>>>> For Log::Any to be useful, a substantial number of modules -
+>>>> especially major modules - would have to adopt its use.  
+>>>> Fortunately,
+>>>> with its minimal footprint and standalone nature, authors should  
+>>>> not
+>>>> find Log::Any a difficult dependency to add. Existing logging
+>>>> mechanisms, such as LWP::Debug and $DBI::tfh, could easily be
+>>>> converted to write *both* to their existing output streams and to
+>>>> Log::Any. This would preserve backward compatibility for existing
+>>>> applications, but allow new applications to benefit from more
+>>>> powerful
+>>>> logging. I would be willing to submit such patches to major module
+>>>> authors to get things going.
+
+>>>> MODULE NAME
+
+>>>> Other potential names for this module:
+>>>>    * Log::Service
+>>>>    * Log::Proxy
+>>>>    * Log::API
+
+>>>> However, since many log frameworks themselves have similar  
+>>>> "generic"
+>>>> names (e.g. Log::Dispatcher), I felt that Log::Any was the most
+>>>> distinct.
+
+>>>> FEEDBACK?
+
+>>>> Feedback is most welcome. Thanks!
+
+>>>> Jon
+
+
+    Reply to author    Forward  
+		
+		
+		
+You must Sign in before you can post messages.
+To post a message you must first join this group.
+Please update your nickname on the subscription settings page before posting.
+You do not have the permission required to post.
+	
+		
+Swartz@Pobox.Com   	
+View profile
+	 More options Sep 8, 3:55 am
+Newsgroups: perl.module-authors
+From: swa...@pobox.com (Swa...@Pobox.Com)
+Date: Sat, 08 Sep 2007 04:55:19 -0700
+Local: Sat, Sep 8 2007 3:55 am
+Subject: Re: Module Proposal: Log::Any
+Reply to author | Forward | Print | Individual message | Show original | Report this message | Find messages by this author
+
+> So I guess what I'm saying is that the final thing that would stop me from
+> using Log::Any "everywhere" (meaning also in performance-critical code) is
+> the overhead for the common (production) case of logging being entirely
+> disabled.  How about providing all three methods of checking as part of the
+> API?
+
+>     $log->debug(...)  if $log->is_debug();      # method
+>     $log->debug(...)  if Log::Any::is_debug();  # sub
+>     $log->debug(...)  if $Log::Any::Is_Debug;   # var
+
+Good point. The last two need to be tweaked so that we can assign
+different logging levels and/or destinations to different loggers -
+e.g. to turn on just Rose::DB debug logging without a flood from other
+modules. (See log4perl).
+
+How about this:
+
+    use Log::Abstract qw($log $log_is_debug);
+
+    $log->debug(...) if $log_is_debug;
+
+which translates to something like
+
+    use Log::Abstract;
+    my $log = Log::Abstract->get_logger
+        (category => __PACKAGE__, is_debug_flag => \my $log_is_debug);
+
+    $log->debug(...) if $log_is_debug;
+
+Now $log_is_debug, like $log, is class/category specific. Note that
+with either syntax, Log::Abstract is able to keep track of all the
+$log_is_debug variables and update them at runtime when something
+happens in the log framework to change log levels (e.g. log4perl
+reloading configuration). Assuming log level changes happen
+infrequently, this should yield good performance even when logging is
+turned on.
+
+    Reply to author    Forward  
+		
+		
+		
+You must Sign in before you can post messages.
+To post a message you must first join this group.
+Please update your nickname on the subscription settings page before posting.
+You do not have the permission required to post.
+	
+		
+Bill Ward   	
+View profile
+	 More options Sep 8, 11:00 am
+Newsgroups: perl.module-authors
+From: b...@wards.net (Bill Ward)
+Date: Sat, 8 Sep 2007 12:00:19 -0700
+Local: Sat, Sep 8 2007 11:00 am
+Subject: Re: Module Proposal: Log::Any
+Reply to author | Forward | Print | Individual message | Show original | Report this message | Find messages by this author
+On 9/8/07, swa...@pobox.com <swa...@pobox.com> wrote:
+
+- Hide quoted text -
+- Show quoted text -
+> > So I guess what I'm saying is that the final thing that would stop me from
+> > using Log::Any "everywhere" (meaning also in performance-critical code) is
+> > the overhead for the common (production) case of logging being entirely
+> > disabled.  How about providing all three methods of checking as part of the
+> > API?
+
+> >     $log->debug(...)  if $log->is_debug();      # method
+> >     $log->debug(...)  if Log::Any::is_debug();  # sub
+> >     $log->debug(...)  if $Log::Any::Is_Debug;   # var
+
+> Good point. The last two need to be tweaked so that we can assign
+> different logging levels and/or destinations to different loggers -
+> e.g. to turn on just Rose::DB debug logging without a flood from other
+> modules. (See log4perl).
+
+> How about this:
+
+>     use Log::Abstract qw($log $log_is_debug);
+
+>     $log->debug(...) if $log_is_debug;
+
+> which translates to something like
+
+>     use Log::Abstract;
+>     my $log = Log::Abstract->get_logger
+>         (category => __PACKAGE__, is_debug_flag => \my $log_is_debug);
+
+>     $log->debug(...) if $log_is_debug;
+
+> Now $log_is_debug, like $log, is class/category specific. Note that
+> with either syntax, Log::Abstract is able to keep track of all the
+> $log_is_debug variables and update them at runtime when something
+> happens in the log framework to change log levels (e.g. log4perl
+> reloading configuration). Assuming log level changes happen
+> infrequently, this should yield good performance even when logging is
+> turned on.
+
+So you're saying if export() finds '$log' in its arg list, it will
+create a $log variable in the calling package and initialize it to an
+object?  I don't think I've ever seen that done, but I think I like
+that idea...  though I'm inclined to think that passing \$LOG would be
+a bit more perlish.
+
+    Reply to author    Forward  
+		
+		
+		
+You must Sign in before you can post messages.
+To post a message you must first join this group.
+Please update your nickname on the subscription settings page before posting.
+You do not have the permission required to post.
+	
+		
+A. Pagaltzis   	
+View profile
+* Bill Ward <b...@wards.net> [2007-09-08 21:45]: > I don't think I've ever seen that done,     use LWP::Simple qw($ua); -- *AUTOLOAD=*_;sub _{s/(.*)::(.*)/print$2,(",$\/"," ")[defined wantarray]/e;$1} &Just->another->Perl->hack; #Aristotle
+	 More options Sep 8, 8:51 pm
+Newsgroups: perl.module-authors
+From: pagalt...@gmx.de (A. Pagaltzis)
+Date: Sun, 9 Sep 2007 06:51:28 +0200
+Local: Sat, Sep 8 2007 8:51 pm
+Subject: Re: Module Proposal: Log::Any
+Reply to author | Forward | Print | Individual message | Show original | Report this message | Find messages by this author
+* Bill Ward <b...@wards.net> [2007-09-08 21:45]:
+
+> I don't think I've ever seen that done,
+
+    use LWP::Simple qw($ua);
+
+-- 
+*AUTOLOAD=*_;sub _{s/(.*)::(.*)/print$2,(",$\/"," ")[defined wantarray]/e;$1}
+&Just->another->Perl->hack;
+#Aristotle
+
+    Reply to author    Forward  
+Cancel
+		
+		
+Send  Discard
+		
+		
+From: 	
+To: 	
+Cc: 	
+Followup To: 	
+	
+Add Cc | Add Followup-to | Edit Subject 	
+Subject: 	
+		
+Send  Discard
+	
+		
+		
+		
+You must Sign in before you can post messages.
+To post a message you must first join this group.
+Please update your nickname on the subscription settings page before posting.
+You do not have the permission required to post.
+	
+		
+A. Pagaltzis   	
+View profile
+* Jonathan Swartz <swa...@pobox.com> [2007-09-08 12:15]: > On Sep 7, 2007, at 12:30 PM, Bill Ward wrote: > >"Abstract" has two meanings, so I think that could be > >confusing.  I think Log::Any is better. > Ok, noted. The ::Abstract suffix does have some precedence in > other  CPAN modules, which was what ultimately convinced me. > Log::Any seems  to have turned a number of people off. I'm > still open to other names. You can dis-suggest one of the meanings by making the name Logger::Abstract. Regards, -- Aristotle Pagaltzis // <http://plasmasturm.org/>
+	 More options Sep 8, 8:54 pm
+Newsgroups: perl.module-authors
+From: pagalt...@gmx.de (A. Pagaltzis)
+Date: Sun, 9 Sep 2007 06:54:04 +0200
+Local: Sat, Sep 8 2007 8:54 pm
+Subject: Re: Module Proposal: Log::Any
+Reply to author | Forward | Print | Individual message | Show original | Report this message | Find messages by this author
+* Jonathan Swartz <swa...@pobox.com> [2007-09-08 12:15]:
+
+> On Sep 7, 2007, at 12:30 PM, Bill Ward wrote:
+> >"Abstract" has two meanings, so I think that could be
+> >confusing.  I think Log::Any is better.
+
+> Ok, noted. The ::Abstract suffix does have some precedence in
+> other  CPAN modules, which was what ultimately convinced me.
+> Log::Any seems  to have turned a number of people off. I'm
+> still open to other names.
+
+You can dis-suggest one of the meanings by making the name
+Logger::Abstract.
+
+Regards,
+-- 
+Aristotle Pagaltzis // <http://plasmasturm.org/>
+
+    Reply to author    Forward  
+Cancel
+		
+		
+Send  Discard
+		
+		
+From: 	
+To: 	
+Cc: 	
+Followup To: 	
+	
+Add Cc | Add Followup-to | Edit Subject 	
+Subject: 	
+		
+Send  Discard
+	
+		
+		
+		
+You must Sign in before you can post messages.
+To post a message you must first join this group.
+Please update your nickname on the subscription settings page before posting.
+You do not have the permission required to post.
+	
+		
+A. Pagaltzis   	
+View profile
+* Smylers <Smyl...@stripey.com> [2007-09-08 02:20]: > The most recent development release has this in its changelog: Urgh. Regards, -- Aristotle Pagaltzis // <http://plasmasturm.org/>
+	 More options Sep 8, 8:50 pm
+Newsgroups: perl.module-authors
+From: pagalt...@gmx.de (A. Pagaltzis)
+Date: Sun, 9 Sep 2007 06:50:13 +0200
+Local: Sat, Sep 8 2007 8:50 pm
+Subject: Re: Module Proposal: Log::Any
+Reply to author | Forward | Print | Individual message | Show original | Report this message | Find messages by this author
+* Smylers <Smyl...@stripey.com> [2007-09-08 02:20]:
+
+> The most recent development release has this in its changelog:
+
+Urgh.
+
+Regards,
+-- 
+Aristotle Pagaltzis // <http://plasmasturm.org/>
+
+    Reply to author    Forward  
+Cancel
+		
+		
+Send  Discard
+		
+		
+From: 	
+To: 	
+Cc: 	
+Followup To: 	
+	
+Add Cc | Add Followup-to | Edit Subject 	
+Subject: 	
+		
+Send  Discard
+	
+		
+		
+		
+You must Sign in before you can post messages.
+To post a message you must first join this group.
+Please update your nickname on the subscription settings page before posting.
+You do not have the permission required to post.
+	
+		
+John Siracusa   	
+View profile
+On 9/8/07 7:55 AM, swa...@pobox.com wrote: > How about this: >     use Log::Abstract qw($log $log_is_debug); >     $log->debug(...) if $log_is_debug; > which translates to something like >     use Log::Abstract; >     my $log = Log::Abstract->get_logger >         (category => __PACKAGE__, is_debug_flag => \my $log_is_debug); >     $log->debug(...) if $log_is_debug; Looks good to me, although I'm not sure how you're going to go from a string argument to Log::Any::import() to creating a lexical in the calling packing and then snagging a reference to it.  Evil PAD manipulation?  Source filters?  Or will you simply use a package global instead?  (That'd be fine with me.) -John
+	 More options Sep 8, 3:32 pm
+Newsgroups: perl.module-authors
+From: sirac...@gmail.com (John Siracusa)
+Date: Sat, 08 Sep 2007 19:32:45 -0400
+Local: Sat, Sep 8 2007 3:32 pm
+Subject: Re: Module Proposal: Log::Any
+Reply to author | Forward | Print | Individual message | Show original | Report this message | Find messages by this author
+On 9/8/07 7:55 AM, swa...@pobox.com wrote:
+
+> How about this:
+
+>     use Log::Abstract qw($log $log_is_debug);
+
+>     $log->debug(...) if $log_is_debug;
+
+> which translates to something like
+
+>     use Log::Abstract;
+>     my $log = Log::Abstract->get_logger
+>         (category => __PACKAGE__, is_debug_flag => \my $log_is_debug);
+
+>     $log->debug(...) if $log_is_debug;
+
+Looks good to me, although I'm not sure how you're going to go from a string
+argument to Log::Any::import() to creating a lexical in the calling packing
+and then snagging a reference to it.  Evil PAD manipulation?  Source
+filters?  Or will you simply use a package global instead?  (That'd be fine
+with me.)
+
+-John
+
+    Reply to author    Forward  
+Cancel
+		
+		
+Send  Discard
+		
+		
+From: 	
+To: 	
+Cc: 	
+Followup To: 	
+	
+Add Cc | Add Followup-to | Edit Subject 	
+Subject: 	
+		
+Send  Discard
+	
+		
+		
+		
+You must Sign in before you can post messages.
+To post a message you must first join this group.
+Please update your nickname on the subscription settings page before posting.
+You do not have the permission required to post.
+	
+		
+John Siracusa   	
+View profile
+On 9/9/07 12:54 AM, A. Pagaltzis wrote: > * Jonathan Swartz <swa...@pobox.com> [2007-09-08 12:15]: >> On Sep 7, 2007, at 12:30 PM, Bill Ward wrote: >>> "Abstract" has two meanings, so I think that could be >>> confusing.  I think Log::Any is better. >> Ok, noted. The ::Abstract suffix does have some precedence in >> other  CPAN modules, which was what ultimately convinced me. >> Log::Any seems  to have turned a number of people off. I'm >> still open to other names. > You can dis-suggest one of the meanings by making the name > Logger::Abstract. FWIW, I still like Log::Any the best. -John
+	 More options Sep 8, 9:00 pm
+Newsgroups: perl.module-authors
+From: sirac...@gmail.com (John Siracusa)
+Date: Sun, 09 Sep 2007 01:00:34 -0400
+Local: Sat, Sep 8 2007 9:00 pm
+Subject: Re: Module Proposal: Log::Any
+Reply to author | Forward | Print | Individual message | Show original | Report this message | Find messages by this author
+On 9/9/07 12:54 AM, A. Pagaltzis wrote:
+
+> * Jonathan Swartz <swa...@pobox.com> [2007-09-08 12:15]:
+>> On Sep 7, 2007, at 12:30 PM, Bill Ward wrote:
+>>> "Abstract" has two meanings, so I think that could be
+>>> confusing.  I think Log::Any is better.
+
+>> Ok, noted. The ::Abstract suffix does have some precedence in
+>> other  CPAN modules, which was what ultimately convinced me.
+>> Log::Any seems  to have turned a number of people off. I'm
+>> still open to other names.
+
+> You can dis-suggest one of the meanings by making the name
+> Logger::Abstract.
+
+FWIW, I still like Log::Any the best.
+
+-John
+
+    Reply to author    Forward  
+Cancel
+		
+		
+Send  Discard
+		
+		
+From: 	
+To: 	
+Cc: 	
+Followup To: 	
+	
+Add Cc | Add Followup-to | Edit Subject 	
+Subject: 	
+		
+Send  Discard
+	
+		
+		
+		
+You must Sign in before you can post messages.
+To post a message you must first join this group.
+Please update your nickname on the subscription settings page before posting.
+You do not have the permission required to post.
+	
+		
+Jonathan Swartz   	
+View profile
+> Looks good to me, although I'm not sure how you're going to go from a string > argument to Log::Any::import() to creating a lexical in the calling packing > and then snagging a reference to it.  Evil PAD manipulation?  Source > filters?  Or will you simply use a package global instead?  (That'd be fine > with me.) The latter - in the case of     use Log::Abstract qw($log $log_is_debug); both $log and $log_is_debug will be imported as package globals. It seems like a reasonable trade-off for the convenience. Then, we have to keep track of every $log_is_debug type variable that we've handed out, so we can change it on the fly if necessary. People would have to refrain from copying or passing this variable around by value, lest it lose its "dynamic" property. Also not ideal, but the best we can do and still preserve optimal performance.
+	 More options Sep 9, 11:24 am
+Newsgroups: perl.module-authors
+From: swa...@pobox.com (Jonathan Swartz)
+Date: Sun, 09 Sep 2007 12:24:54 -0700
+Local: Sun, Sep 9 2007 11:24 am
+Subject: Re: Module Proposal: Log::Any
+Reply to author | Forward | Print | Individual message | Show original | Report this message | Find messages by this author
+
+> Looks good to me, although I'm not sure how you're going to go from a string
+> argument to Log::Any::import() to creating a lexical in the calling packing
+> and then snagging a reference to it.  Evil PAD manipulation?  Source
+> filters?  Or will you simply use a package global instead?  (That'd be fine
+> with me.)
+
+The latter - in the case of
+
+    use Log::Abstract qw($log $log_is_debug);
+
+both $log and $log_is_debug will be imported as package globals. It
+seems like a reasonable trade-off for the convenience.
+
+Then, we have to keep track of every $log_is_debug type variable that
+we've handed out, so we can change it on the fly if necessary. People
+would have to refrain from copying or passing this variable around by
+value, lest it lose its "dynamic" property. Also not ideal, but the
+best we can do and still preserve optimal performance.
+
+    Reply to author    Forward  
+Cancel
+		
+		
+Send  Discard
+		
+		
+From: 	
+To: 	
+Cc: 	
+Followup To: 	
+	
+Add Cc | Add Followup-to | Edit Subject 	
+Subject: 	
+		
+Send  Discard
+	
+		
+		
+		
+You must Sign in before you can post messages.
+To post a message you must first join this group.
+Please update your nickname on the subscription settings page before posting.
+You do not have the permission required to post.
+	
+		
+Leon Brocard   	
+View profile
+	 More options Sep 10, 5:10 am
+Newsgroups: perl.module-authors
+From: a...@astray.com (Leon Brocard)
+Date: Mon, 10 Sep 2007 14:10:10 +0100
+Local: Mon, Sep 10 2007 5:10 am
+Subject: Re: Module Proposal: Log::Any
+Reply to author | Forward | Print | Individual message | Show original | Report this message | Find messages by this author
+On 06/09/2007, swa...@pobox.com <swa...@pobox.com> wrote:
+
+> TOO MANY WAYS TO LOG
+
+And you're adding another one. Why not pick one existing logging
+module and convince enough people to start using it? Write journal
+entries, give lightning talks at your Perl monger group, real talks at
+YAPCs and bribe friends with beer ;-)
+
+Leon
+
+    Reply to author    Forward  
+		
+		
+		
+You must Sign in before you can post messages.
+To post a message you must first join this group.
+Please update your nickname on the subscription settings page before posting.
+You do not have the permission required to post.
+	
+		
+A. Pagaltzis   	
+View profile
+	 More options Sep 10, 8:53 am
+Newsgroups: perl.module-authors
+From: pagalt...@gmx.de (A. Pagaltzis)
+Date: Mon, 10 Sep 2007 18:53:52 +0200
+Local: Mon, Sep 10 2007 8:53 am
+Subject: Re: Module Proposal: Log::Any
+Reply to author | Forward | Print | Individual message | Show original | Report this message | Find messages by this author
+* Leon Brocard <a...@astray.com> [2007-09-10 15:15]:
+
+> Why not pick one existing logging module and convince enough
+> people to start using it?
+
+Basically because we have two contenders, Log4perl and
+Log::Dispatch. I’ve bought into the former; others have bought
+into the latter. (I haven’t looked into Log::Dispatch at all, so
+I don’t know if I’d like it better, but I am enjoying Log4perl a
+lot anyway.)
+
+And I’d certainly be miffed if I wanted to pick up a module and
+found it forced me to use Log::Dispatch when the rest of my app
+is already using Log4perl.
+
+So Log::Any makes some amount of sense for people who don’t want
+to lock their users into either choice.
+
+OTOH maybe two adapter modules would work as well, one to let
+Log4perl-based code run under Log::Dispatch and one vice versa.
+(Do such already exist possibly? Or is there a fundamental
+problem with that idea?)
+
+Regards,
+-- 
+Aristotle Pagaltzis // <http://plasmasturm.org/>
+
+    Reply to author    Forward  
+		
+		
+		
+You must Sign in before you can post messages.
+To post a message you must first join this group.
+Please update your nickname on the subscription settings page before posting.
+You do not have the permission required to post.
+	
+		
+Ken Williams   	
+View profile
+	 More options Sep 10, 6:35 pm
+Newsgroups: perl.module-authors
+From: kena...@gmail.com (Ken Williams)
+Date: Mon, 10 Sep 2007 21:35:12 -0500
+Local: Mon, Sep 10 2007 6:35 pm
+Subject: Re: Module Proposal: Log::Any
+Reply to author | Forward | Print | Individual message | Show original | Report this message | Find messages by this author
+
+On Sep 10, 2007, at 11:53 AM, A. Pagaltzis wrote:
+
+> So Log::Any makes some amount of sense for people who don’t want
+> to lock their users into either choice.
+
+Yes, it's sort of a DBI for logging stuff, if I understand correctly;  
+does little work of its own, but allows multiple backends for the  
+real lifting.
+
+I think it fits well with this whole "aspect-oriented" idea, which  
+locks people into a particular implementation of each aspect unless  
+there's an abstraction layer on top.
+
+> OTOH maybe two adapter modules would work as well, one to let
+> Log4perl-based code run under Log::Dispatch and one vice versa.
+> (Do such already exist possibly? Or is there a fundamental
+> problem with that idea?)
+
+It precludes a third logging backend from joining in the fun, because  
+for N backends you'd need N*(N-1) adapters.
+
+  -Ken
+
+    Reply to author    Forward  
+		
+		
+		
+You must Sign in before you can post messages.
+To post a message you must first join this group.
+Please update your nickname on the subscription settings page before posting.
+You do not have the permission required to post.
+	
+		
+Jonathan Swartz   	
+View profile
+	 More options Sep 11, 3:43 am
+Newsgroups: perl.module-authors
+From: swa...@pobox.com (Jonathan Swartz)
+Date: Tue, 11 Sep 2007 04:43:57 -0700
+Local: Tues, Sep 11 2007 3:43 am
+Subject: Re: Module Proposal: Log::Any
+Reply to author | Forward | Print | Individual message | Show original | Report this message | Find messages by this author
+
+> And I'd certainly be miffed if I wanted to pick up a module and
+> found it forced me to use Log::Dispatch when the rest of my app
+> is already using Log4perl.
+
+Right. It isn't so much about convincing module owners, as Leon
+suggested; it's dealing with all the existing applications out there
+that have already made a choice of one logging package or another
+(including, I'm sure, a fair number of home-grown loggers that people
+could hook up to Log::Any manually).
+
+> OTOH maybe two adapter modules would work as well, one to let
+> Log4perl-based code run under Log::Dispatch and one vice versa.
+> (Do such already exist possibly? Or is there a fundamental
+> problem with that idea?)
+
+Log4perl can output to any of the Log::Dispatch dispatchers, so there
+is a certain amount of equivalence between them in that way. However,
+the complexity of initialization and configuration differ. There is
+also Log::Dispatch::Config, which seems to go halfway between the two.
+
+    Reply to author    Forward  
+		
+		
+		
+You must Sign in before you can post messages.
+To post a message you must first join this group.
+Please update your nickname on the subscription settings page before posting.
+You do not have the permission required to post.
+End of messages 	
+« Back to Discussions 	« Newer topic 	    	Older topic »
+
+	
+Create a group - Google Groups - Google Home - Terms of Service - Privacy Policy
+©2007 Google

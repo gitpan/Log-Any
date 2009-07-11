@@ -1,0 +1,340 @@
+<?xml version="1.0" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Log::Any -- Bringing loggers and listeners together</title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<link rev="made" href="mailto:_www@b04.apple.com" />
+</head>
+
+<body style="background-color: white">
+
+<p><a name="__index__"></a></p>
+<!-- INDEX BEGIN -->
+
+<ul>
+
+	<li><a href="#name">NAME</a></li>
+	<li><a href="#synopsis">SYNOPSIS</a></li>
+	<li><a href="#description">DESCRIPTION</a></li>
+	<li><a href="#log_levels">LOG LEVELS</a></li>
+	<li><a href="#categories">CATEGORIES</a></li>
+	<li><a href="#adapters">ADAPTERS</a></li>
+	<li><a href="#producing_logs__for_modules_">PRODUCING LOGS (FOR MODULES)</a></li>
+	<ul>
+
+		<li><a href="#getting_a_logger">Getting a logger</a></li>
+		<li><a href="#logging">Logging</a></li>
+		<li><a href="#log_level_detection">Log level detection</a></li>
+	</ul>
+
+	<li><a href="#consuming_logs__for_applications_">CONSUMING LOGS (FOR APPLICATIONS)</a></li>
+	<ul>
+
+		<li><a href="#choosing_an_adapter">Choosing an adapter</a></li>
+	</ul>
+
+	<li><a href="#motivation">MOTIVATION</a></li>
+	<li><a href="#q___a">Q &amp; A</a></li>
+	<li><a href="#author">AUTHOR</a></li>
+	<li><a href="#see_also">SEE ALSO</a></li>
+	<li><a href="#copyright___license">COPYRIGHT &amp; LICENSE</a></li>
+</ul>
+<!-- INDEX END -->
+
+<hr />
+<p>
+</p>
+<hr />
+<h1><a name="name">NAME</a></h1>
+<p>Log::Any -- Bringing loggers and listeners together</p>
+<p>
+</p>
+<hr />
+<h1><a name="synopsis">SYNOPSIS</a></h1>
+<p>In a CPAN or other module:</p>
+<pre>
+    package Foo;
+    use Log::Any qw($log);</pre>
+<pre>
+    $log-&gt;error(&quot;an error occurred&quot;);
+    $log-&gt;debugf(&quot;arguments are: %s&quot;, \@_)
+        if $log-&gt;is_debug();</pre>
+<p>In your application:</p>
+<pre>
+    use Log::Any;</pre>
+<pre>
+    # Choose a logging mechanism:</pre>
+<pre>
+    use Log::Log4perl;
+    Log::Log4perl::init('/etc/log4perl.conf');
+    Log::Any-&gt;set_adapter('Log::Log4perl');</pre>
+<pre>
+    # or</pre>
+<pre>
+    use Log::Dispatch;
+    my $dispatcher = Log::Dispatch-&gt;new();
+    $dispatcher-&gt;add(...);
+    Log::Any-&gt;set_adapter('Log::Dispatch', dispatcher =&gt; $dispatcher);</pre>
+<pre>
+    # or</pre>
+<pre>
+    use Log::Dispatch::Config;
+    Log::Dispatch::Config-&gt;configure('/path/to/log.conf');
+    Log::Any-&gt;set_adapter('Log::Dispatch', dispatcher =&gt; Log::Dispatch::Config-&gt;instance);</pre>
+<pre>
+    # or</pre>
+<pre>
+    Log::Any-&gt;set_adapter('+My::Log::Any::Adapter', ...);</pre>
+<p>
+</p>
+<hr />
+<h1><a name="description">DESCRIPTION</a></h1>
+<p><code>Log::Any</code> allows CPAN modules to safely and efficiently log messages, while
+letting the application choose (or decline to choose) a logging mechanism such
+as <code>Log::Dispatch</code> or <code>Log::Log4perl</code>.</p>
+<p><code>Log::Any</code> has a very tiny footprint and no dependencies, which makes it
+appropriate for even small CPAN modules to use. Importantly, it defaults to
+'null' logging activity, so a module can safely log without worrying about
+whether the application has chosen (or will ever choose) a logging mechanism.</p>
+<p>The application, in turn, may at any time choose a logging mechanism and tell
+<code>Log::Any</code> to use it.  This will cause all subsequent <code>Log::Any</code> logging
+statements out in various modules to flow through that mechanism.</p>
+<p>
+</p>
+<hr />
+<h1><a name="log_levels">LOG LEVELS</a></h1>
+<p>Every logging mechanism on CPAN uses a slightly different set of levels. For
+<code>Log::Any</code> we've standardized on the log levels from syslog, and also added a
+number of common aliases:</p>
+<pre>
+     debug
+     info (inform)
+     notice
+     warning (warn)
+     error (err)
+     critical (crit, fatal)
+     alert
+     emergency</pre>
+<p>Levels are translated as appropriate to the underlying logging mechanism. For
+example, log4perl only has five levels, so we translate 'notice' to 'info' and
+the top three levels to 'fatal'.</p>
+<p>
+</p>
+<hr />
+<h1><a name="categories">CATEGORIES</a></h1>
+<p>Every logger has a category, generally the name of the class that asked for the
+logger. With the notable exception of log4perl, most logging mechanisms don't
+care about categories, so they will just be ignored. That said, category-based
+logging is very powerful and it would be nice if more mechanisms supported it.</p>
+<p>
+</p>
+<hr />
+<h1><a name="adapters">ADAPTERS</a></h1>
+<p>In order to use a logging mechanism with <code>Log::Any</code>, there needs to be an
+adapter class for it. Typically this is named
+Log::Any::Adapter::<em>FullLogModuleName</em>.</p>
+<p>All of the adapters (with the exception of the default 'Null' adapter) are in
+CPAN distributions separate from Log-Any. This allows us to minimize Log-Any's
+dependencies, tests, and revisions, which in turn should help module authors
+feel comfortable about using it.</p>
+<p>The following adapters are available as of this writing:</p>
+<ul>
+<li>
+<p><a href="/Log/Any/Adapter/Log/Log4perl.html">Log::Any::Adapter::Log::Log4perl</a> - work
+with log4perl</p>
+</li>
+<li>
+<p><a href="/Log/Any/Adapter/Log/Dispatch.html">Log::Any::Adapter::Log::Dispatch</a> - work
+with Log::Dispatch or Log::Dispatch::Config</p>
+</li>
+<li>
+<p><a href="/Log/Any/Adapter/Null.html">Log::Any::Adapter::Null</a> - logs nothing - the default</p>
+</li>
+</ul>
+<p>This list may be incomplete. A complete set of adapters can be found on CPAN by
+searching for ``Log::Any::Adapter''.</p>
+<p>See <a href="/Log/Any/Adapter/Development.html">the Log::Any::Adapter::Development manpage</a> for information on developing new
+adapters.</p>
+<p>
+</p>
+<hr />
+<h1><a name="producing_logs__for_modules_">PRODUCING LOGS (FOR MODULES)</a></h1>
+<p>
+</p>
+<h2><a name="getting_a_logger">Getting a logger</a></h2>
+<p>The most convenient way to get a logger in your module is:</p>
+<pre>
+    use Log::Any qw($log);</pre>
+<p>This creates a package variable $log and assigns it to the logger for the
+current package. It is equivalent to</p>
+<pre>
+    our $log = Log::Any-&gt;get_logger(category =&gt; __PACKAGE__);</pre>
+<p>In general, to get a logger for a specified category:</p>
+<pre>
+    my $log = Log::Any-&gt;get_logger(category =&gt; $category)</pre>
+<p>If no category is specified, the caller package is used.</p>
+<p>
+</p>
+<h2><a name="logging">Logging</a></h2>
+<p>To log a message, use any of the log levels or aliases. e.g.</p>
+<pre>
+    $log-&gt;error(&quot;this is an error&quot;);
+    $log-&gt;warn(&quot;this is a warning&quot;);
+    $log-&gt;warning(&quot;this is also a warning&quot;);</pre>
+<p>You should <strong>not</strong> include a newline in your message; that is the responsibility
+of the logging mechanism, which may or may not want the newline.</p>
+<p>There are also printf-style versions of each of these methods:</p>
+<pre>
+    $log-&gt;errorf(&quot;an error occurred: %s&quot;, $@);
+    $log-&gt;debugf(&quot;called with %d params: %s&quot;, $param_count, \@params);</pre>
+<p>The printf-style methods have a few advantages. First, they can be more
+readable than concatenated strings (subjective of course); second, any complex
+references (like <code>\@params</code> above) are automatically converted to single-line
+strings with <code>Data::Dumper</code>; third, a logging mechanism could potentially hash
+the format string to a unique id, e.g. to group related log messages together.</p>
+<p>
+</p>
+<h2><a name="log_level_detection">Log level detection</a></h2>
+<p>To detect whether a log level is on, use ``is_'' followed by any of the log
+levels or aliases. e.g.</p>
+<pre>
+    if ($log-&gt;is_info()) { ... }
+    $log-&gt;debug(&quot;arguments are: &quot; . Dumper(\@_))
+        if $log-&gt;is_debug();</pre>
+<p>This is important for efficiency, as you can avoid the work of putting together
+the logging message (in the above case, stringifying <code>@_</code>) if the log level is
+not active.</p>
+<p>Some logging mechanisms don't support detection of log levels. In these cases
+the detection methods will always return 1.</p>
+<p>In contrast, the default logging mechanism - Null - will return 0 for all
+detection methods.</p>
+<p>
+</p>
+<hr />
+<h1><a name="consuming_logs__for_applications_">CONSUMING LOGS (FOR APPLICATIONS)</a></h1>
+<p>
+</p>
+<h2><a name="choosing_an_adapter">Choosing an adapter</a></h2>
+<p>Initially, all <code>Log::Any</code> logs are discarded (via the Null adapter). If you
+want the logs to go somewhere, you need to select an adapter with
+<code>set_adapter</code>, e.g.:</p>
+<pre>
+    # Use Log::Log4perl
+    Log::Log4perl::init('/etc/log4perl.conf');
+    Log::Any-&gt;set_adapter('Log::Log4perl');</pre>
+<pre>
+    # Use Log::Dispatch
+    my $dispatcher = Log::Dispatch-&gt;new();
+    $dispatcher-&gt;add(...);
+    Log::Any-&gt;set_adapter('Log::Dispatch', dispatcher =&gt; $dispatcher);</pre>
+<p>The first argument to <code>set_adapter</code> is the name of an adapter. It is
+automatically prepended with ``Log::Any::Adapter::''. If instead you want to pass
+the full name of an adapter, prefix it with a ``+''. e.g.</p>
+<pre>
+    # Use My::Adapter class
+    Log::Any-&gt;set_adapter('+My::Adapter', ...);</pre>
+<p>The remaining arguments are passed along to the adapter constructor. See the
+documentation for the individual adapter classes for more information.</p>
+<p><code>set_adapter</code> can be called multiple times; the last call overwrites any
+previous calls. In fact, <code>set_adapter</code> is automatically called with 'Null' at
+startup, so every call you make will be an overwrite.</p>
+<p>When you call <code>set_adapter</code>, any <code>Log::Any</code> loggers that have previously been
+created will automatically start using the new adapter. This allows modules to
+freely create and use loggers without worrying about when (or if) the
+application is going to set an adapter. For example:</p>
+<pre>
+    my $log = Log::Any-&gt;get_logger();
+    $log-&gt;error(&quot;aiggh!&quot;);   # this goes nowhere
+    ...
+    Log::Any-&gt;set_adapter('Log::Log4perl');
+    $log-&gt;error(&quot;aiggh!&quot;);   # this goes to log4perl
+    ...
+    Log::Any-&gt;set_adapter('Null');
+    $log-&gt;error(&quot;aiggh!&quot;);   # this goes nowhere again</pre>
+<p>There is no way to set more than one adapter at a time. If you want to log to
+more than one place, arrange that through the logging mechanism (e.g.
+<a href="/Log/Dispatch.html">Log::Dispatch</a> and <a href="/Log/Log4perl.html">Log::Log4perl</a> both make
+this easy).</p>
+<p>
+</p>
+<hr />
+<h1><a name="motivation">MOTIVATION</a></h1>
+<p>Many modules have something interesting to say. Unfortunately there is no
+standard way for them to say it - some output to STDERR, others to <code>warn</code>,
+others to custom file logs. And there is no standard way to get a module to
+start talking - sometimes you must call a uniquely named method, other times
+set a package variable.</p>
+<p>This being Perl, there are many logging mechanisms available on CPAN.  Each has
+their pros and cons. Unfortunately, the existence of so many mechanisms makes
+it difficult for a CPAN author to commit his/her users to one of them. This may
+be why many CPAN modules invent their own logging or choose not to log at all.</p>
+<p>To untangle this situation, we must separate the two parts of a logging API.
+The first, <em>log production</em>, includes methods to output logs (like
+<code>$log-&gt;debug</code>) and methods to inspect whether a log level is activated
+(like <code>$log-&gt;is_debug</code>). This is generally all that CPAN modules care
+about. The second, <em>log consumption</em>, includes a way to configure where
+logging goes (a file, the screen, etc.) and the code to send it there. This
+choice generally belongs to the application.</p>
+<p><code>Log::Any</code> provides a standard log production API for modules, and allows
+applications to choose the mechanism for log consumption.</p>
+<p>See <a href="http://www.openswartz.com/2007/09/06/standard-logging-api/">http://www.openswartz.com/2007/09/06/standard-logging-api/</a> for the original
+post proposing this module.</p>
+<p>
+</p>
+<hr />
+<h1><a name="q___a">Q &amp; A</a></h1>
+<dl>
+<dt><strong><a name="item_isn_27t_log_3a_3aany_just_yet_another_logging_mech">Isn't Log::Any just yet another logging mechanism?</a></strong>
+
+<dd>
+<p>No. <code>Log::Any</code> does not, and never will, include code that knows how to log to
+a particular place (file, screen, etc.) It can only forward logging requests to
+another logging mechanism.</p>
+</dd>
+</li>
+<dt><strong><a name="item_why_don_27t_you_just_pick_the_best_logging_mechani">Why don't you just pick the best logging mechanism, and use and promote it?</a></strong>
+
+<dd>
+<p>Each of the logging mechanisms have their pros and cons, particularly in terms
+of how they are configured. For example, log4perl offers a great deal of power
+and flexibility but uses a global and potentially heavy configuration, whereas
+<code>Log::Dispatch</code> is extremely configuration-light but doesn't handle
+categories. There is also the unnamed future logger that may have advantages
+over either of these two, and all the custom in-house loggers people have
+created and cannot (for whatever reason) stop using.</p>
+</dd>
+</li>
+<dt><strong><a name="item_why_does_log_3a_3aany_use_moose_or_insert_modern_p">Why does Log::Any use Moose or <em>insert modern Perl technique</em>?</a></strong>
+
+<dd>
+<p>To encourage CPAN module authors to adopt and use <code>Log::Any</code>, we aim to have
+as few dependencies and chances of breakage as possible. Thus, sadly, no
+<code>Moose</code> or other niceties.</p>
+</dd>
+</li>
+</dl>
+<p>
+</p>
+<hr />
+<h1><a name="author">AUTHOR</a></h1>
+<p>Jonathan Swartz</p>
+<p>
+</p>
+<hr />
+<h1><a name="see_also">SEE ALSO</a></h1>
+<p>The many Log:: modules on CPAN</p>
+<p>
+</p>
+<hr />
+<h1><a name="copyright___license">COPYRIGHT &amp; LICENSE</a></h1>
+<p>Copyright (C) 2007 Jonathan Swartz.</p>
+<p>Log::Any is provided ``as is'' and without any express or implied warranties,
+including, without limitation, the implied warranties of merchantibility and
+fitness for a particular purpose.</p>
+<p>This program is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself.</p>
+
+</body>
+
+</html>
