@@ -106,7 +106,6 @@ ADAPTERS
 
 PRODUCING LOGS (FOR MODULES)
   Getting a logger
-
     The most convenient way to get a logger in your module is:
 
         use Log::Any qw($log);
@@ -123,7 +122,6 @@ PRODUCING LOGS (FOR MODULES)
     If no category is specified, the caller package is used.
 
   Logging
-
     To log a message, use any of the log levels or aliases. e.g.
 
         $log->error("this is an error");
@@ -147,7 +145,6 @@ PRODUCING LOGS (FOR MODULES)
     related log messages together.
 
   Log level detection
-
     To detect whether a log level is on, use "is_" followed by any of the
     log levels or aliases. e.g.
 
@@ -167,7 +164,6 @@ PRODUCING LOGS (FOR MODULES)
 
 CONSUMING LOGS (FOR APPLICATIONS)
   Choosing an adapter
-
     Initially, all `Log::Any' logs are discarded (via the Null adapter). If
     you want the logs to go somewhere, you need to select an adapter with
     `set_adapter', e.g.:

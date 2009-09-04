@@ -2,6 +2,11 @@ Revision history for Log-Any
 
 ** denotes an incompatible change
 
+0.04  Sep 3, 2009
+
+* Fixes
+  - Replace Test::Deep::cmp_deeply with an internal version to avoid Test::Deep dependency
+
 0.03  Jul 17, 2009
 
 * Improvements
