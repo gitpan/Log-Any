@@ -19,3 +19,4 @@ README
 t/00-load.t
 t/errors.t
 t/valid-methods.t
+xt/release/backcompat.t

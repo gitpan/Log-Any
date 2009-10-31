@@ -3,7 +3,7 @@ use 5.006;
 use strict;
 use warnings;
 
-our $VERSION = '0.05';
+our $VERSION = '0.06';
 
 # Require rather than use, because it depends on subroutines defined below
 #
@@ -86,6 +86,13 @@ sub logging_aliases               { @logging_aliases }
 sub detection_methods             { @detection_methods }
 sub detection_aliases             { @detection_aliases }
 sub logging_and_detection_methods { @logging_and_detection_methods }
+
+# For backward compatibility
+sub set_adapter {
+    my $class = shift;
+    require Log::Any::Adapter;
+    Log::Any::Adapter->set(@_);
+}
 
 1;
 
