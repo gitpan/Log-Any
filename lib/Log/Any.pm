@@ -1,9 +1,8 @@
 package Log::Any;
-use 5.006;
 use strict;
 use warnings;
 
-our $VERSION = '0.06';
+our $VERSION = '0.07';
 
 # Require rather than use, because it depends on subroutines defined below
 #
@@ -117,6 +116,19 @@ In a CPAN or other module:
 
     my $log2 = Log::Any->get_logger(category => 'My::Class');
 
+In your application:
+
+    use Log::Any::Adapter;
+    
+    # Send all logs to Log::Log4perl
+    Log::Any::Adapter->set('Log4perl');
+
+    # Send all logs to Log::Dispatch
+    my $log = Log::Dispatch->new(outputs => [[ ... ]]);
+    Log::Any::Adapter->set( 'Dispatch', dispatcher => $log );
+
+    # See Log::Any::Adapter documentation for more options
+
 =head1 DESCRIPTION
 
 C<Log::Any> allows CPAN modules to safely and efficiently log messages, while
@@ -194,8 +206,8 @@ There are also printf-style versions of each of these methods:
 The printf-style methods have a few advantages. First, they can be more
 readable than concatenated strings (subjective of course); second, any complex
 references (like C<\@params> above) are automatically converted to single-line
-strings with C<Data::Dumper>; third, a logging mechanism could potentially hash
-the format string to a unique id, e.g. to group related log messages together.
+strings with C<Data::Dumper>; third, a logging mechanism could potentially use
+the format string to group related log messages together.
 
 =head2 Log level detection
 
@@ -215,6 +227,11 @@ the detection methods will always return 1.
 
 In contrast, the default logging mechanism - Null - will return 0 for all
 detection methods.
+
+=head2 Testing
+
+L<Log::Any::Test|Log::Any::Test> provides a mechanism to test code that uses
+C<Log::Any>.
 
 =head1 CONSUMING LOGS (FOR APPLICATIONS)
 
@@ -276,9 +293,10 @@ created and cannot (for whatever reason) stop using.
 Our intent is to keep C<Log::Any> minimal, and change it only when absolutely
 necessary. Most of the "innovation", if any, is expected to occur in
 C<Log::Any::Adapter>, which your module should not have to depend on (unless it
-wants to direct logs somewhere specific).
+wants to direct logs somewhere specific). C<Log::Any> has no module
+dependencies other than L<Test::Simple|Test::Simple> for testing.
 
-=item Why doesn't Log::Any use Moose or I<insert modern Perl technique>?
+=item Why doesn't Log::Any use I<insert modern Perl technique>?
 
 To encourage CPAN module authors to adopt and use C<Log::Any>, we aim to have
 as few dependencies and chances of breakage as possible. Thus, no C<Moose> or

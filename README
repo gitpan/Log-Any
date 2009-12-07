@@ -13,6 +13,19 @@ SYNOPSIS
 
         my $log2 = Log::Any->get_logger(category => 'My::Class');
 
+    In your application:
+
+        use Log::Any::Adapter;
+    
+        # Send all logs to Log::Log4perl
+        Log::Any::Adapter->set('Log4perl');
+
+        # Send all logs to Log::Dispatch
+        my $log = Log::Dispatch->new(outputs => [[ ... ]]);
+        Log::Any::Adapter->set( 'Dispatch', dispatcher => $log );
+
+        # See Log::Any::Adapter documentation for more options
+
 DESCRIPTION
     `Log::Any' allows CPAN modules to safely and efficiently log messages,
     while letting the application choose (or decline to choose) a logging
@@ -89,8 +102,8 @@ PRODUCING LOGS (FOR MODULES)
     readable than concatenated strings (subjective of course); second, any
     complex references (like `\@params' above) are automatically converted
     to single-line strings with `Data::Dumper'; third, a logging mechanism
-    could potentially hash the format string to a unique id, e.g. to group
-    related log messages together.
+    could potentially use the format string to group related log messages
+    together.
 
   Log level detection
 
@@ -110,6 +123,10 @@ PRODUCING LOGS (FOR MODULES)
 
     In contrast, the default logging mechanism - Null - will return 0 for
     all detection methods.
+
+  Testing
+
+    Log::Any::Test provides a mechanism to test code that uses `Log::Any'.
 
 CONSUMING LOGS (FOR APPLICATIONS)
     To direct logs somewhere - a file, the screen, etc. - you must use
@@ -166,8 +183,10 @@ Q & A
         absolutely necessary. Most of the "innovation", if any, is expected
         to occur in `Log::Any::Adapter', which your module should not have
         to depend on (unless it wants to direct logs somewhere specific).
+        `Log::Any' has no module dependencies other than Test::Simple for
+        testing.
 
-    Why doesn't Log::Any use Moose or *insert modern Perl technique*?
+    Why doesn't Log::Any use *insert modern Perl technique*?
         To encourage CPAN module authors to adopt and use `Log::Any', we aim
         to have as few dependencies and chances of breakage as possible.
         Thus, no `Moose' or other niceties.
