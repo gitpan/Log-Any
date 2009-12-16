@@ -11,6 +11,7 @@ inc/Module/Install/Metadata.pm
 inc/Module/Install/Win32.pm
 inc/Module/Install/WriteAll.pm
 lib/Log/Any.pm
+lib/Log/Any/Adapter/Core.pm
 lib/Log/Any/Adapter/Null.pm
 lib/Log/Any/Adapter/Test.pm
 lib/Log/Any/Test.pm

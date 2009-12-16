@@ -21,4 +21,4 @@ no_index:
     - xt
 resources:
   license: http://dev.perl.org/licenses/
-version: 0.07
+version: 0.08
