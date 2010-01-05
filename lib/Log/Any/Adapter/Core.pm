@@ -22,7 +22,12 @@ foreach my $name ( Log::Any->logging_methods, keys(%aliases) ) {
         $methodf,
         sub {
             my ( $self, $format, @params ) = @_;
-            my @new_params = map { ref($_) ? dump_one_line($_) : $_ } @params;
+            my @new_params =
+              map {
+                   !defined($_) ? '<undef>'
+                  : ref($_)     ? dump_one_line($_)
+                  : $_
+              } @params;
             my $new_message = sprintf( $format, @new_params );
             $self->$method($new_message);
         }
@@ -38,3 +43,29 @@ sub _make_method {
 }
 
 1;
+
+__END__
+
+=pod
+
+=head1 NAME
+
+Log::Any::Adapter::Core
+
+=head1 DESCRIPTION
+
+This is the base class for both real Log::Any adapters and
+Log::Any::Adapter::Null.
+
+=head1 AUTHOR
+
+Jonathan Swartz
+
+=head1 COPYRIGHT & LICENSE
+
+Copyright (C) 2009 Jonathan Swartz, all rights reserved.
+
+This program is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself.
+
+=cut
