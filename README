@@ -41,10 +41,10 @@ DESCRIPTION
     Log::Any::Adapter.
 
 LOG LEVELS
-    Every logging mechanism on CPAN uses a slightly different set of levels.
-    For `Log::Any' we've standardized on the log levels from syslog, and
-    also added a number of common aliases:
+    `Log::Any' supports the following log levels and aliases, which is meant
+    to be inclusive of the major logging packages:
 
+         trace
          debug
          info (inform)
          notice
@@ -55,7 +55,7 @@ LOG LEVELS
          emergency
 
     Levels are translated as appropriate to the underlying logging
-    mechanism. For example, log4perl only has five levels, so we translate
+    mechanism. For example, log4perl only has six levels, so we translate
     'notice' to 'info' and the top three levels to 'fatal'.
 
 CATEGORIES

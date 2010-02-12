@@ -2,6 +2,11 @@ Revision history for Log-Any
 
 ** denotes an incompatible change
 
+0.11  Feb 12, 2010
+
+* Improvements
+  - Add trace level - suggested by Szymon Swierkosz
+
 0.10  Jan 5, 2010
 
 * Fixes
