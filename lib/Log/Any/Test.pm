@@ -1,14 +1,24 @@
 package Log::Any::Test;
+BEGIN {
+  $Log::Any::Test::VERSION = '0.12';
+}
 use strict;
 use warnings;
 
 # 'use Log::Any::Test' just defines a test version of Log::Any::Adapter.
 #
 package Log::Any::Adapter;
+BEGIN {
+  $Log::Any::Adapter::VERSION = '0.12';
+}
 use Log::Any::Adapter::Test;
 use strict;
 use warnings;
 our $Initialized = 1;
+
+# Eliminate 'subroutine redefined' warning in case Log::Any::Adapter already loaded
+#
+BEGIN { no strict 'refs'; delete 'Log::Any::Adapter::'->{get_logger} }
 
 sub get_logger {
     my ( $self, $category ) = @_;
@@ -17,11 +27,17 @@ sub get_logger {
 
 1;
 
+
+__END__
 =pod
 
 =head1 NAME
 
 Log::Any::Test -- Test what you're logging with Log::Any
+
+=head1 VERSION
+
+version 0.12
 
 =head1 SYNOPSIS
 
@@ -118,4 +134,12 @@ Copyright (C) 2009 Jonathan Swartz, all rights reserved.
 This program is free software; you can redistribute it and/or modify it under
 the same terms as Perl itself.
 
+=head1 COPYRIGHT AND LICENSE
+
+This software is copyright (c) 2011 by Jonathan Swartz.
+
+This is free software; you can redistribute it and/or modify it under
+the same terms as the Perl 5 programming language system itself.
+
 =cut
+

@@ -1,4 +1,7 @@
 package Log::Any::Adapter::Test;
+BEGIN {
+  $Log::Any::Adapter::Test::VERSION = '0.12';
+}
 use Data::Dumper;
 use Log::Any;
 use Test::Builder;

@@ -1,6 +1,9 @@
 NAME
     Log::Any -- Bringing loggers and listeners together
 
+VERSION
+    version 0.12
+
 SYNOPSIS
     In a CPAN or other module:
 
@@ -65,7 +68,6 @@ CATEGORIES
 
 PRODUCING LOGS (FOR MODULES)
   Getting a logger
-
     The most convenient way to get a logger in your module is:
 
         use Log::Any qw($log);
@@ -82,7 +84,6 @@ PRODUCING LOGS (FOR MODULES)
     If no category is specified, the caller package is used.
 
   Logging
-
     To log a message, use any of the log levels or aliases. e.g.
 
         $log->error("this is an error");
@@ -111,7 +112,6 @@ PRODUCING LOGS (FOR MODULES)
         string (or a digest thereof) to group related log messages together.
 
   Log level detection
-
     To detect whether a log level is on, use "is_" followed by any of the
     log levels or aliases. e.g.
 
@@ -130,7 +130,6 @@ PRODUCING LOGS (FOR MODULES)
     all detection methods.
 
   Testing
-
     Log::Any::Test provides a mechanism to test code that uses `Log::Any'.
 
 CONSUMING LOGS (FOR APPLICATIONS)
@@ -196,19 +195,12 @@ Q & A
         to have as few dependencies and chances of breakage as possible.
         Thus, no `Moose' or other niceties.
 
-AUTHOR
-    Jonathan Swartz
-
 SEE ALSO
-    Log::Any::Adapter; the many Log:: modules on CPAN
+    Log::Any::Adapter, the many Log:: modules on CPAN
 
-COPYRIGHT & LICENSE
-    Copyright (C) 2009 Jonathan Swartz.
+COPYRIGHT AND LICENSE
+    This software is copyright (c) 2011 by Jonathan Swartz.
 
-    Log::Any is provided "as is" and without any express or implied
-    warranties, including, without limitation, the implied warranties of
-    merchantibility and fitness for a particular purpose.
-
-    This program is free software; you canredistribute it and/or modify it
-    under the same terms as Perl itself.
+    This is free software; you can redistribute it and/or modify it under
+    the same terms as the Perl 5 programming language system itself.
 

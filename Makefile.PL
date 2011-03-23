@@ -1,14 +1,51 @@
-use inc::Module::Install;
 
-name 'Log-Any';
-abstract 'Log anywhere';
-all_from 'lib/Log/Any.pm';
-author 'Jonathan Swartz <swartz@pobox.com>';
+use strict;
+use warnings;
 
-build_requires 'Test::Simple' => 0;
 
-license 'perl';
 
-auto_install;
+use ExtUtils::MakeMaker 6.31;
 
-WriteAll;
+
+
+my %WriteMakefileArgs = (
+  'ABSTRACT' => 'Bringing loggers and listeners together',
+  'AUTHOR' => 'Jonathan Swartz <swartz@pobox.com>',
+  'BUILD_REQUIRES' => {
+    'Test::More' => '0'
+  },
+  'CONFIGURE_REQUIRES' => {
+    'ExtUtils::MakeMaker' => '6.31'
+  },
+  'DISTNAME' => 'Log-Any',
+  'EXE_FILES' => [],
+  'LICENSE' => 'perl',
+  'NAME' => 'Log::Any',
+  'PREREQ_PM' => {},
+  'VERSION' => '0.12',
+  'test' => {
+    'TESTS' => 't/*.t'
+  }
+);
+
+
+unless ( eval { ExtUtils::MakeMaker->VERSION(6.56) } ) {
+  my $br = delete $WriteMakefileArgs{BUILD_REQUIRES};
+  my $pp = $WriteMakefileArgs{PREREQ_PM};
+  for my $mod ( keys %$br ) {
+    if ( exists $pp->{$mod} ) {
+      $pp->{$mod} = $br->{$mod} if $br->{$mod} > $pp->{$mod};
+    }
+    else {
+      $pp->{$mod} = $br->{$mod};
+    }
+  }
+}
+
+delete $WriteMakefileArgs{CONFIGURE_REQUIRES}
+  unless eval { ExtUtils::MakeMaker->VERSION(6.52) };
+
+WriteMakefile(%WriteMakefileArgs);
+
+
+

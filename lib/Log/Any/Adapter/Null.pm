@@ -1,4 +1,7 @@
 package Log::Any::Adapter::Null;
+BEGIN {
+  $Log::Any::Adapter::Null::VERSION = '0.12';
+}
 use Log::Any;
 use strict;
 use warnings;
@@ -19,22 +22,26 @@ my @all_methods = (
     ( map { $_ . "f" } ( Log::Any->logging_methods, @alias_names ) ),
 );
 
-# All methods are no-ops
+# All methods are no-ops and return false
 #
 foreach my $method (@all_methods) {
     no strict 'refs';
-    *{ __PACKAGE__ . "::$method" } = sub { };
+    *{ __PACKAGE__ . "::$method" } = sub { return undef };
 }
 
 1;
 
-__END__
+
 
 =pod
 
 =head1 NAME
 
 Log::Any::Adapter::Null
+
+=head1 VERSION
+
+version 0.12
 
 =head1 SYNOPSIS
 
@@ -61,4 +68,15 @@ Copyright (C) 2009 Jonathan Swartz, all rights reserved.
 This program is free software; you can redistribute it and/or modify it under
 the same terms as Perl itself.
 
+=head1 COPYRIGHT AND LICENSE
+
+This software is copyright (c) 2011 by Jonathan Swartz.
+
+This is free software; you can redistribute it and/or modify it under
+the same terms as the Perl 5 programming language system itself.
+
 =cut
+
+
+__END__
+

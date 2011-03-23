@@ -2,7 +2,7 @@ package Log::Any;
 use strict;
 use warnings;
 
-our $VERSION = '0.11';
+our $VERSION = '0.12';
 
 # Require rather than use, because it depends on subroutines defined below
 #
@@ -95,13 +95,17 @@ sub set_adapter {
 
 1;
 
-__END__
+
 
 =pod
 
 =head1 NAME
 
 Log::Any -- Bringing loggers and listeners together
+
+=head1 VERSION
+
+version 0.12
 
 =head1 SYNOPSIS
 
@@ -319,23 +323,19 @@ other niceties.
 
 =back
 
-=head1 AUTHOR
-
-Jonathan Swartz
-
 =head1 SEE ALSO
 
-L<Log::Any::Adapter|Log::Any::Adapter>; the many Log:: modules on CPAN
+L<Log::Any::Adapter>, the many Log:: modules on CPAN
 
-=head1 COPYRIGHT & LICENSE
+=head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2009 Jonathan Swartz.
+This software is copyright (c) 2011 by Jonathan Swartz.
 
-Log::Any is provided "as is" and without any express or implied warranties,
-including, without limitation, the implied warranties of merchantibility and
-fitness for a particular purpose.
-
-This program is free software; you canredistribute it and/or modify it under
-the same terms as Perl itself.
+This is free software; you can redistribute it and/or modify it under
+the same terms as the Perl 5 programming language system itself.
 
 =cut
+
+
+__END__
+

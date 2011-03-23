@@ -1,4 +1,12 @@
 #!perl
+
+BEGIN {
+  unless ($ENV{RELEASE_TESTING}) {
+    require Test::More;
+    Test::More::plan(skip_all => 'these tests are for release candidate testing');
+  }
+}
+
 #
 # Test old Log::Any->set_adapter API
 #
@@ -13,4 +21,3 @@ my $log = Log::Dispatch->new(outputs => [['Screen', newline => 1, min_level => '
 Log::Any->set_adapter('Dispatch', dispatcher => $log);
 my $merged = capture_merged { $log->error("bleah") };
 is($merged, "bleah\n", "got log");
-

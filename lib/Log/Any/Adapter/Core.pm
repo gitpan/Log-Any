@@ -1,4 +1,7 @@
 package Log::Any::Adapter::Core;
+BEGIN {
+  $Log::Any::Adapter::Core::VERSION = '0.12';
+}
 use strict;
 use warnings;
 
@@ -51,13 +54,17 @@ sub _dump_one_line {
 
 1;
 
-__END__
+
 
 =pod
 
 =head1 NAME
 
 Log::Any::Adapter::Core
+
+=head1 VERSION
+
+version 0.12
 
 =head1 DESCRIPTION
 
@@ -75,4 +82,15 @@ Copyright (C) 2009 Jonathan Swartz, all rights reserved.
 This program is free software; you can redistribute it and/or modify it under
 the same terms as Perl itself.
 
+=head1 COPYRIGHT AND LICENSE
+
+This software is copyright (c) 2011 by Jonathan Swartz.
+
+This is free software; you can redistribute it and/or modify it under
+the same terms as the Perl 5 programming language system itself.
+
 =cut
+
+
+__END__
+
