@@ -1,6 +1,6 @@
 package Log::Any::Adapter::Null;
 BEGIN {
-  $Log::Any::Adapter::Null::VERSION = '0.12';
+  $Log::Any::Adapter::Null::VERSION = '0.13';
 }
 use Log::Any;
 use strict;
@@ -41,7 +41,7 @@ Log::Any::Adapter::Null
 
 =head1 VERSION
 
-version 0.12
+version 0.13
 
 =head1 SYNOPSIS
 

@@ -1,6 +1,6 @@
 package Log::Any::Adapter::Test;
 BEGIN {
-  $Log::Any::Adapter::Test::VERSION = '0.12';
+  $Log::Any::Adapter::Test::VERSION = '0.13';
 }
 use Data::Dumper;
 use Log::Any;
@@ -79,7 +79,7 @@ sub does_not_contain_ok {
 
     $test_name ||= "log does not contain '$regex'";
     my $found =
-      first_index( sub { $_->{message} =~ /$regex/ }, @{ $self->msgs } );
+      _first_index( sub { $_->{message} =~ /$regex/ }, @{ $self->msgs } );
     if ( $found != -1 ) {
         $tb->ok( 0, $test_name );
         $tb->diag( "found message matching $regex: " . $self->msgs->[$found] );

@@ -5,9 +5,9 @@ author:
 build_requires:
   Test::More: 0
 configure_requires:
-  ExtUtils::MakeMaker: 6.31
+  ExtUtils::MakeMaker: 6.30
 dynamic_config: 0
-generated_by: 'Dist::Zilla version 4.200000, CPAN::Meta::Converter version 2.102400'
+generated_by: 'Dist::Zilla version 4.200008, CPAN::Meta::Converter version 2.102400'
 license: perl
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
@@ -19,4 +19,4 @@ no_index:
 resources:
   bugtracker: http://rt.cpan.org/NoAuth/Bugs.html?Dist=Log-Any
   repository: git://github.com/jonswar/perl-log-any.git
-version: 0.12
+version: 0.13
