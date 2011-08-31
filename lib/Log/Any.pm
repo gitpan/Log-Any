@@ -1,8 +1,9 @@
 package Log::Any;
+BEGIN {
+  $Log::Any::VERSION = '0.14';
+}
 use strict;
 use warnings;
-
-our $VERSION = '0.12';
 
 # Require rather than use, because it depends on subroutines defined below
 #
@@ -105,7 +106,7 @@ Log::Any -- Bringing loggers and listeners together
 
 =head1 VERSION
 
-version 0.13
+version 0.14
 
 =head1 SYNOPSIS
 

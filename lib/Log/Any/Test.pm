@@ -1,6 +1,6 @@
 package Log::Any::Test;
 BEGIN {
-  $Log::Any::Test::VERSION = '0.13';
+  $Log::Any::Test::VERSION = '0.14';
 }
 use strict;
 use warnings;
@@ -9,7 +9,7 @@ use warnings;
 #
 package Log::Any::Adapter;
 BEGIN {
-  $Log::Any::Adapter::VERSION = '0.13';
+  $Log::Any::Adapter::VERSION = '0.14';
 }
 use Log::Any::Adapter::Test;
 use strict;
@@ -37,7 +37,7 @@ Log::Any::Test -- Test what you're logging with Log::Any
 
 =head1 VERSION
 
-version 0.13
+version 0.14
 
 =head1 SYNOPSIS
 

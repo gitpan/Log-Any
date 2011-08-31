@@ -1,6 +1,6 @@
 package Log::Any::Adapter::Core;
 BEGIN {
-  $Log::Any::Adapter::Core::VERSION = '0.13';
+  $Log::Any::Adapter::Core::VERSION = '0.14';
 }
 use strict;
 use warnings;
@@ -64,7 +64,7 @@ Log::Any::Adapter::Core
 
 =head1 VERSION
 
-version 0.13
+version 0.14
 
 =head1 DESCRIPTION
 
