@@ -14,3 +14,4 @@ t/errors.t
 t/log-any-test.t
 t/release-backcompat.t
 t/valid-methods.t
+tidyall.ini

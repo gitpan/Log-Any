@@ -9,22 +9,22 @@ use ExtUtils::MakeMaker 6.30;
 
 
 my %WriteMakefileArgs = (
-  'ABSTRACT' => 'Bringing loggers and listeners together',
-  'AUTHOR' => 'Jonathan Swartz <swartz@pobox.com>',
-  'BUILD_REQUIRES' => {
-    'Test::More' => '0'
+  "ABSTRACT" => "Bringing loggers and listeners together",
+  "AUTHOR" => "Jonathan Swartz <swartz\@pobox.com>",
+  "BUILD_REQUIRES" => {
+    "Test::More" => 0
   },
-  'CONFIGURE_REQUIRES' => {
-    'ExtUtils::MakeMaker' => '6.30'
+  "CONFIGURE_REQUIRES" => {
+    "ExtUtils::MakeMaker" => "6.30"
   },
-  'DISTNAME' => 'Log-Any',
-  'EXE_FILES' => [],
-  'LICENSE' => 'perl',
-  'NAME' => 'Log::Any',
-  'PREREQ_PM' => {},
-  'VERSION' => '0.14',
-  'test' => {
-    'TESTS' => 't/*.t'
+  "DISTNAME" => "Log-Any",
+  "EXE_FILES" => [],
+  "LICENSE" => "perl",
+  "NAME" => "Log::Any",
+  "PREREQ_PM" => {},
+  "VERSION" => "0.15",
+  "test" => {
+    "TESTS" => "t/*.t"
   }
 );
 

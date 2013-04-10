@@ -1,16 +1,14 @@
 package Log::Any::Test;
-BEGIN {
-  $Log::Any::Test::VERSION = '0.14';
+{
+  $Log::Any::Test::VERSION = '0.15';
 }
 use strict;
 use warnings;
 
 # 'use Log::Any::Test' just defines a test version of Log::Any::Adapter.
 #
-package Log::Any::Adapter;
-BEGIN {
-  $Log::Any::Adapter::VERSION = '0.14';
-}
+package # hide from PAUSE
+    Log::Any::Adapter;
 use Log::Any::Adapter::Test;
 use strict;
 use warnings;
@@ -27,8 +25,8 @@ sub get_logger {
 
 1;
 
-
 __END__
+
 =pod
 
 =head1 NAME
@@ -37,7 +35,7 @@ Log::Any::Test -- Test what you're logging with Log::Any
 
 =head1 VERSION
 
-version 0.14
+version 0.15
 
 =head1 SYNOPSIS
 
@@ -142,4 +140,3 @@ This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.
 
 =cut
-

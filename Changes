@@ -2,6 +2,11 @@ Revision history for Log-Any
 
 ** denotes an incompatible change
 
+0.15  Apr 10, 2013
+
+* Fixes
+  - Hide 'package Log::Any::Adapter' from PAUSE/Module::Metadata - miyagawa
+
 0.14  Aug 31, 2011
 
 * Fixes

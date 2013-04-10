@@ -1,6 +1,6 @@
 package Log::Any::Adapter::Test;
-BEGIN {
-  $Log::Any::Adapter::Test::VERSION = '0.14';
+{
+  $Log::Any::Adapter::Test::VERSION = '0.15';
 }
 use Data::Dumper;
 use Log::Any;

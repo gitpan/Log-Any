@@ -1,6 +1,6 @@
 package Log::Any;
-BEGIN {
-  $Log::Any::VERSION = '0.14';
+{
+  $Log::Any::VERSION = '0.15';
 }
 use strict;
 use warnings;
@@ -96,7 +96,7 @@ sub set_adapter {
 
 1;
 
-
+__END__
 
 =pod
 
@@ -106,7 +106,7 @@ Log::Any -- Bringing loggers and listeners together
 
 =head1 VERSION
 
-version 0.14
+version 0.15
 
 =head1 SYNOPSIS
 
@@ -336,7 +336,3 @@ This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.
 
 =cut
-
-
-__END__
-

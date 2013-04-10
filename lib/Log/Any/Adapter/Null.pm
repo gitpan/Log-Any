@@ -1,6 +1,6 @@
 package Log::Any::Adapter::Null;
-BEGIN {
-  $Log::Any::Adapter::Null::VERSION = '0.14';
+{
+  $Log::Any::Adapter::Null::VERSION = '0.15';
 }
 use Log::Any;
 use strict;
@@ -31,17 +31,17 @@ foreach my $method (@all_methods) {
 
 1;
 
-
+__END__
 
 =pod
 
 =head1 NAME
 
-Log::Any::Adapter::Null
+Log::Any::Adapter::Null -- Discards all log messages
 
 =head1 VERSION
 
-version 0.14
+version 0.15
 
 =head1 SYNOPSIS
 
@@ -76,7 +76,3 @@ This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.
 
 =cut
-
-
-__END__
-
