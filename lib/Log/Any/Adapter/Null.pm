@@ -1,15 +1,13 @@
-package Log::Any::Adapter::Null;
-{
-  $Log::Any::Adapter::Null::VERSION = '0.15';
-}
-use Log::Any;
+use 5.008001;
 use strict;
 use warnings;
 
-sub new {
-    my $class = shift;
-    return bless {}, $class;
-}
+package Log::Any::Adapter::Null;
+
+# ABSTRACT: Discards all log messages
+our $VERSION = '0.90'; # TRIAL
+
+use base qw/Log::Any::Adapter::Base/;
 
 # Collect all logging and detection methods, including aliases and printf variants
 #
@@ -26,7 +24,7 @@ my @all_methods = (
 #
 foreach my $method (@all_methods) {
     no strict 'refs';
-    *{ __PACKAGE__ . "::$method" } = sub { return undef };
+    *{$method} = sub { return undef }; ## no critic: intentional explict undef ?!
 }
 
 1;
@@ -35,13 +33,15 @@ __END__
 
 =pod
 
+=encoding UTF-8
+
 =head1 NAME
 
-Log::Any::Adapter::Null -- Discards all log messages
+Log::Any::Adapter::Null - Discards all log messages
 
 =head1 VERSION
 
-version 0.15
+version 0.90
 
 =head1 SYNOPSIS
 
@@ -57,20 +57,23 @@ loaded.
 
 L<Log::Any|Log::Any>, L<Log::Any::Adapter|Log::Any::Adapter>
 
-=head1 AUTHOR
+=head1 AUTHORS
 
-Jonathan Swartz
+=over 4
 
-=head1 COPYRIGHT & LICENSE
+=item *
 
-Copyright (C) 2009 Jonathan Swartz, all rights reserved.
+Jonathan Swartz <swartz@pobox.com>
 
-This program is free software; you can redistribute it and/or modify it under
-the same terms as Perl itself.
+=item *
+
+David Golden <dagolden@cpan.org>
+
+=back
 
 =head1 COPYRIGHT AND LICENSE
 
-This software is copyright (c) 2011 by Jonathan Swartz.
+This software is copyright (c) 2014 by Jonathan Swartz and David Golden.
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.

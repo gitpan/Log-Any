@@ -2,6 +2,21 @@ Revision history for Log-Any
 
 ** denotes an incompatible change
 
+0.90      2014-12-12 17:08:22-05:00 America/New_York (TRIAL RELEASE)
+
+    [Added]
+
+    - Logging now goes via a Log::Any::Proxy object instead of directly to
+      an adapter. This allows easy customization of the message production.
+
+    [Internal]
+
+    - Merged Log-Any and Log-Any-Adapter distributions; reduces code
+      duplication and ensures Log::Any and adapter framework stay in sync
+
+    - Eliminates all non-core dependencies (as of Perl 5.8.1), including
+      Capture::Tiny, Devel::GlobalDestruction and Guard
+
 0.15  Apr 10, 2013
 
 * Fixes

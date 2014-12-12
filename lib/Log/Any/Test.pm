@@ -1,27 +1,15 @@
+use 5.008001;
+use strict;
+use warnings;
+
 package Log::Any::Test;
-{
-  $Log::Any::Test::VERSION = '0.15';
-}
-use strict;
-use warnings;
 
-# 'use Log::Any::Test' just defines a test version of Log::Any::Adapter.
-#
-package # hide from PAUSE
-    Log::Any::Adapter;
-use Log::Any::Adapter::Test;
-use strict;
-use warnings;
-our $Initialized = 1;
+# ABSTRACT: Test what you're logging with Log::Any
+our $VERSION = '0.90'; # TRIAL
 
-# Eliminate 'subroutine redefined' warning in case Log::Any::Adapter already loaded
-#
-BEGIN { no strict 'refs'; delete 'Log::Any::Adapter::'->{get_logger} }
-
-sub get_logger {
-    my ( $self, $category ) = @_;
-    return Log::Any::Adapter::Test->new( category => $category );
-}
+no warnings 'once';
+$Log::Any::OverrideDefaultAdapterClass = 'Log::Any::Adapter::Test';
+$Log::Any::OverrideDefaultProxyClass   = 'Log::Any::Proxy::Test';
 
 1;
 
@@ -29,13 +17,15 @@ __END__
 
 =pod
 
+=encoding UTF-8
+
 =head1 NAME
 
-Log::Any::Test -- Test what you're logging with Log::Any
+Log::Any::Test - Test what you're logging with Log::Any
 
 =head1 VERSION
 
-version 0.15
+version 0.90
 
 =head1 SYNOPSIS
 
@@ -101,6 +91,17 @@ untouched).
 
 Tests that no message in the log buffer matches I<$regex>.
 
+=item category_contains_ok ($category, $regex[, $test_name])
+
+Tests that a message in the log buffer from a specific category matches
+I<$regex>. On success, the message is I<removed> from the log buffer (but any
+other matches are left untouched).
+
+=item category_does_not_contain_ok ($category, $regex[, $test_name])
+
+Tests that no message from a specific category in the log buffer matches
+I<$regex>.
+
 =item empty_ok ([$test_name])
 
 Tests that there is no log buffer left. On failure, the log buffer is cleared
@@ -121,20 +122,23 @@ Clears the log buffer.
 
 L<Log::Any|Log::Any>, L<Test::Log::Dispatch|Test::Log::Dispatch>
 
-=head1 AUTHOR
+=head1 AUTHORS
 
-Jonathan Swartz
+=over 4
 
-=head1 COPYRIGHT & LICENSE
+=item *
 
-Copyright (C) 2009 Jonathan Swartz, all rights reserved.
+Jonathan Swartz <swartz@pobox.com>
 
-This program is free software; you can redistribute it and/or modify it under
-the same terms as Perl itself.
+=item *
+
+David Golden <dagolden@cpan.org>
+
+=back
 
 =head1 COPYRIGHT AND LICENSE
 
-This software is copyright (c) 2011 by Jonathan Swartz.
+This software is copyright (c) 2014 by Jonathan Swartz and David Golden.
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.

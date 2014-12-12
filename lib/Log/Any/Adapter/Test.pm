@@ -1,45 +1,43 @@
+use 5.008001;
+use strict;
+use warnings;
+
 package Log::Any::Adapter::Test;
-{
-  $Log::Any::Adapter::Test::VERSION = '0.15';
-}
+
+# ABSTRACT: Backend adapter for Log::Any::Test
+our $VERSION = '0.90'; # TRIAL
+
 use Data::Dumper;
 use Log::Any;
 use Test::Builder;
-use strict;
-use warnings;
-use base qw(Log::Any::Adapter::Core);
+
+use base qw/Log::Any::Adapter::Base/;
 
 my $tb = Test::Builder->new();
 my @msgs;
 
-sub new {
-    my $class = shift;
-    return bless {@_}, $class;
-}
-
 # All detection methods return true
 #
 foreach my $method ( Log::Any->detection_methods() ) {
-    _make_method( $method, sub { 1 } );
+    no strict 'refs';
+    *{$method} = sub { 1 };
 }
 
 # All logging methods push onto msgs array
 #
 foreach my $method ( Log::Any->logging_methods() ) {
-    _make_method(
-        $method,
-        sub {
-            my ( $self, $msg ) = @_;
-            push(
-                @msgs,
-                {
-                    message  => $msg,
-                    level    => $method,
-                    category => $self->{category}
-                }
-            );
-        }
-    );
+    no strict 'refs';
+    *{$method} = sub {
+        my ( $self, $msg ) = @_;
+        push(
+            @msgs,
+            {
+                message  => $msg,
+                level    => $method,
+                category => $self->{category}
+            }
+        );
+    };
 }
 
 # Testing methods below
@@ -70,7 +68,27 @@ sub contains_ok {
     else {
         $tb->ok( 0, $test_name );
         $tb->diag( "could not find message matching $regex; log contains: "
-              . _dump_one_line( $self->msgs ) );
+              . $self->dump_one_line( $self->msgs ) );
+    }
+}
+
+sub category_contains_ok {
+    my ( $self, $category, $regex, $test_name ) = @_;
+
+    $test_name ||= "log for $category contains '$regex'";
+    my $found =
+      _first_index(
+        sub { $_->{category} eq $category && $_->{message} =~ /$regex/ },
+        @{ $self->msgs } );
+    if ( $found != -1 ) {
+        splice( @{ $self->msgs }, $found, 1 );
+        $tb->ok( 1, $test_name );
+    }
+    else {
+        $tb->ok( 0, $test_name );
+        $tb->diag(
+            "could not find $category message matching $regex; log contains: "
+              . $self->dump_one_line( $self->msgs ) );
     }
 }
 
@@ -89,6 +107,24 @@ sub does_not_contain_ok {
     }
 }
 
+sub category_does_not_contain_ok {
+    my ( $self, $category, $regex, $test_name ) = @_;
+
+    $test_name ||= "log for $category contains '$regex'";
+    my $found =
+      _first_index(
+        sub { $_->{category} eq $category && $_->{message} =~ /$regex/ },
+        @{ $self->msgs } );
+    if ( $found != -1 ) {
+        $tb->ok( 0, $test_name );
+        $tb->diag( "found $category message matching $regex: "
+              . $self->msgs->[$found] );
+    }
+    else {
+        $tb->ok( 1, $test_name );
+    }
+}
+
 sub empty_ok {
     my ( $self, $test_name ) = @_;
 
@@ -98,8 +134,8 @@ sub empty_ok {
     }
     else {
         $tb->ok( 0, $test_name );
-        $tb->diag(
-            "log is not empty; contains " . _dump_one_line( $self->msgs ) );
+        $tb->diag( "log is not empty; contains "
+              . $self->dump_one_line( $self->msgs ) );
         $self->clear();
     }
 }
@@ -115,24 +151,9 @@ sub contains_only_ok {
     }
     else {
         $tb->ok( 0, $test_name );
-        $tb->diag(
-            "log contains $count messages: " . _dump_one_line( $self->msgs ) );
+        $tb->diag( "log contains $count messages: "
+              . $self->dump_one_line( $self->msgs ) );
     }
-}
-
-sub _dump_one_line {
-    my ($value) = @_;
-
-    return Data::Dumper->new( [$value] )->Indent(0)->Sortkeys(1)->Quotekeys(0)
-      ->Terse(1)->Dump();
-}
-
-sub _make_method {
-    my ( $method, $code, $pkg ) = @_;
-
-    $pkg ||= caller();
-    no strict 'refs';
-    *{ $pkg . "::$method" } = $code;
 }
 
 sub _first_index {
@@ -145,3 +166,44 @@ sub _first_index {
 }
 
 1;
+
+__END__
+
+=pod
+
+=encoding UTF-8
+
+=head1 NAME
+
+Log::Any::Adapter::Test - Backend adapter for Log::Any::Test
+
+=head1 VERSION
+
+version 0.90
+
+=head1 SEE ALSO
+
+L<Log::Any|Log::Any>, L<Log::Any::Adapter|Log::Any::Adapter>
+
+=head1 AUTHORS
+
+=over 4
+
+=item *
+
+Jonathan Swartz <swartz@pobox.com>
+
+=item *
+
+David Golden <dagolden@cpan.org>
+
+=back
+
+=head1 COPYRIGHT AND LICENSE
+
+This software is copyright (c) 2014 by Jonathan Swartz and David Golden.
+
+This is free software; you can redistribute it and/or modify it under
+the same terms as the Perl 5 programming language system itself.
+
+=cut
