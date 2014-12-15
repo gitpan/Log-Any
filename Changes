@@ -2,6 +2,29 @@ Revision history for Log-Any
 
 ** denotes an incompatible change
 
+0.92      2014-12-15 07:12:38-05:00 America/New_York (TRIAL RELEASE)
+
+    [Deprecated]
+
+    - Deprecated some methods in Log::Any::Adapter::Util
+
+    [Added]
+
+    - File, Stdout, and Stderr adapters now support a minimum
+      log level parameter.
+
+    [Fixed]
+
+    - File will flock the handle when writing (if flock is avaiable).
+
+    - Won't die if adapters aren't loadable modules as long as they
+      provide a constructor.  This allows using private adapters
+      defined in another file.
+
+    [Documented]
+
+    - Revised docs for creating adapters
+
 0.91      2014-12-14 22:13:09-05:00 America/New_York (TRIAL RELEASE)
 
     [Changed]

@@ -28,6 +28,7 @@ do { my $x = {
                                       'Carp' => '0',
                                       'Data::Dumper' => '0',
                                       'Exporter' => '0',
+                                      'Fcntl' => '0',
                                       'IO::File' => '0',
                                       'Test::Builder' => '0',
                                       'base' => '0',

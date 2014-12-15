@@ -2,6 +2,7 @@ requires "B" => "0";
 requires "Carp" => "0";
 requires "Data::Dumper" => "0";
 requires "Exporter" => "0";
+requires "Fcntl" => "0";
 requires "IO::File" => "0";
 requires "Test::Builder" => "0";
 requires "base" => "0";
