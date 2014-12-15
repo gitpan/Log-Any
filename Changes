@@ -2,6 +2,19 @@ Revision history for Log-Any
 
 ** denotes an incompatible change
 
+0.91      2014-12-14 22:13:09-05:00 America/New_York (TRIAL RELEASE)
+
+    [Changed]
+
+    - Removed dead code from Log::Any::Adapter::Base; particularly this
+      was the formatting code, since this is now handled by
+      Log::Any::Proxy.
+
+    [Documented]
+
+    - Fixed typos and improved docs for Log::Any::Adapter::Util; removed
+      stub docs for modules that didn't need it.
+
 0.90      2014-12-12 17:08:22-05:00 America/New_York (TRIAL RELEASE)
 
     [Added]

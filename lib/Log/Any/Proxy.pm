@@ -5,7 +5,7 @@ use warnings;
 package Log::Any::Proxy;
 
 # ABSTRACT: Log::Any generator proxy object
-our $VERSION = '0.90'; # TRIAL
+our $VERSION = '0.91'; # TRIAL
 
 use Log::Any::Adapter::Util ();
 
@@ -95,7 +95,7 @@ Log::Any::Proxy - Log::Any generator proxy object
 
 =head1 VERSION
 
-version 0.90
+version 0.91
 
 =head1 SYNOPSIS
 
@@ -225,24 +225,6 @@ attribute.  The default acts like C<sprintf> with some helpful formatting.
 Finally, the message string is logged via the simple logging functions, which
 can transform or prefix as described above.
 
-=head2 Filtering
-
-If you set a C<filter> code reference, you can transform messages before
-logging.  If a filter returns C<undef> or an empty string, nothing will
-be logged.
-
-=head3 Formatting
-
-You can use any formatting function you like using the C<formatter>
-attribute.  For example, you could replace the default with L<String::Flogger>
-like this:
-
-    use String::Flogger;
-    use Log::Any '$log', formatter => sub {
-        my ($cat, $lvl, @args) = @_;
-        String::Flogger::flog( @args );
-    };
-
 =head1 ATTRIBUTES
 
 =head2 adapter
@@ -269,7 +251,8 @@ and a string.  It should return a string to be logged.
 If the return value is undef or the empty string, no message will be
 logged.  Otherwise, the return value is passed to the logging adapter.
 
-Numeric levels range from 0 (emergency) to 8 (trace).
+Numeric levels range from 0 (emergency) to 8 (trace).  Constant functions
+for these levels are available from L<Log::Any::Adapter::Util>.
 
 =head2 formatter
 
@@ -289,12 +272,14 @@ The default formatter acts like C<sprintf>, except that undef arguments are
 changed to C<< <undef> >> and any references or objects are dumped via
 L<Data::Dumper> (but without newlines).
 
-Numeric levels range from 0 (emergency) to 8 (trace).
+Numeric levels range from 0 (emergency) to 8 (trace).  Constant functions
+for these levels are available from L<Log::Any::Adapter::Util>.
 
 =head2 prefix
 
 If defined, this string will be prepended to all messages.  It will not
-include a trailing space, so add that yourself if you want.
+include a trailing space, so add that yourself if you want.  This is less
+flexible/powerful than L</filter>, but avoids an extra function call.
 
 =head1 AUTHORS
 

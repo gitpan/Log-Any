@@ -5,7 +5,7 @@
       "David Golden <dagolden@cpan.org>"
    ],
    "dynamic_config" : 0,
-   "generated_by" : "Dist::Zilla version 5.027, CPAN::Meta::Converter version 2.142690",
+   "generated_by" : "Dist::Zilla version 5.029, CPAN::Meta::Converter version 2.142690",
    "license" : [
       "perl_5"
    ],
@@ -23,7 +23,6 @@
       ],
       "package" : [
          "DB",
-         "Log::Any::Manager",
          "Log::Any::Manager::_Guard"
       ]
    },
@@ -82,51 +81,55 @@
    "provides" : {
       "Log::Any" : {
          "file" : "lib/Log/Any.pm",
-         "version" : "0.90"
+         "version" : "0.91"
       },
       "Log::Any::Adapter" : {
          "file" : "lib/Log/Any/Adapter.pm",
-         "version" : "0.90"
+         "version" : "0.91"
       },
       "Log::Any::Adapter::Base" : {
          "file" : "lib/Log/Any/Adapter/Base.pm",
-         "version" : "0.90"
+         "version" : "0.91"
       },
       "Log::Any::Adapter::File" : {
          "file" : "lib/Log/Any/Adapter/File.pm",
-         "version" : "0.90"
+         "version" : "0.91"
       },
       "Log::Any::Adapter::Null" : {
          "file" : "lib/Log/Any/Adapter/Null.pm",
-         "version" : "0.90"
+         "version" : "0.91"
       },
       "Log::Any::Adapter::Stderr" : {
          "file" : "lib/Log/Any/Adapter/Stderr.pm",
-         "version" : "0.90"
+         "version" : "0.91"
       },
       "Log::Any::Adapter::Stdout" : {
          "file" : "lib/Log/Any/Adapter/Stdout.pm",
-         "version" : "0.90"
+         "version" : "0.91"
       },
       "Log::Any::Adapter::Test" : {
          "file" : "lib/Log/Any/Adapter/Test.pm",
-         "version" : "0.90"
+         "version" : "0.91"
       },
       "Log::Any::Adapter::Util" : {
          "file" : "lib/Log/Any/Adapter/Util.pm",
-         "version" : "0.90"
+         "version" : "0.91"
+      },
+      "Log::Any::Manager" : {
+         "file" : "lib/Log/Any/Manager.pm",
+         "version" : "0.91"
       },
       "Log::Any::Proxy" : {
          "file" : "lib/Log/Any/Proxy.pm",
-         "version" : "0.90"
+         "version" : "0.91"
       },
       "Log::Any::Proxy::Test" : {
          "file" : "lib/Log/Any/Proxy/Test.pm",
-         "version" : "0.90"
+         "version" : "0.91"
       },
       "Log::Any::Test" : {
          "file" : "lib/Log/Any/Test.pm",
-         "version" : "0.90"
+         "version" : "0.91"
       }
    },
    "release_status" : "testing",
@@ -141,7 +144,7 @@
          "web" : "https://github.com/dagolden/Log-Any"
       }
    },
-   "version" : "0.90",
+   "version" : "0.91",
    "x_authority" : "cpan:JSWARTZ",
    "x_contributors" : [
       "Maxim Vuets <maxim.vuets@booking.com>",
