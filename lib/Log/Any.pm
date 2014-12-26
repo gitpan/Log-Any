@@ -5,7 +5,7 @@ use warnings;
 package Log::Any;
 
 # ABSTRACT: Bringing loggers and listeners together
-our $VERSION = '0.92'; # TRIAL
+our $VERSION = '1.00';
 
 use Carp ();
 use Log::Any::Manager;
@@ -119,7 +119,7 @@ Log::Any - Bringing loggers and listeners together
 
 =head1 VERSION
 
-version 0.92
+version 1.00
 
 =head1 SYNOPSIS
 

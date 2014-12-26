@@ -5,7 +5,7 @@ use warnings;
 package Log::Any::Adapter::Stderr;
 
 # ABSTRACT: Simple adapter for logging to STDERR
-our $VERSION = '0.92'; # TRIAL
+our $VERSION = '1.00';
 
 use Log::Any::Adapter::Util ();
 
@@ -58,7 +58,7 @@ Log::Any::Adapter::Stderr - Simple adapter for logging to STDERR
 
 =head1 VERSION
 
-version 0.92
+version 1.00
 
 =head1 SYNOPSIS
 

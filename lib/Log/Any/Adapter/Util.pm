@@ -5,7 +5,7 @@ use warnings;
 package Log::Any::Adapter::Util;
 
 # ABSTRACT: Common utility functions for Log::Any
-our $VERSION = '0.92'; # TRIAL
+our $VERSION = '1.00';
 
 use Data::Dumper;
 use base qw(Exporter);
@@ -224,7 +224,7 @@ Log::Any::Adapter::Util - Common utility functions for Log::Any
 
 =head1 VERSION
 
-version 0.92
+version 1.00
 
 =head1 DESCRIPTION
 
