@@ -2,6 +2,13 @@ Revision history for Log-Any
 
 ** denotes an incompatible change
 
+1.01      2014-12-26 22:25:13-05:00 America/New_York
+
+    [Fixed]
+
+    - 'numeric_level' was not exported properly from
+      Log::Any::Adapter::Util
+
 1.00      2014-12-25 22:04:13-05:00 America/New_York
 
     [Added]
