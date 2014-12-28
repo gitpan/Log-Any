@@ -2,7 +2,7 @@ NAME
     Log::Any - Bringing loggers and listeners together
 
 VERSION
-    version 1.01
+    version 1.02
 
 SYNOPSIS
     In a CPAN or other module:

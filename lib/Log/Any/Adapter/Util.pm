@@ -5,7 +5,7 @@ use warnings;
 package Log::Any::Adapter::Util;
 
 # ABSTRACT: Common utility functions for Log::Any
-our $VERSION = '1.01';
+our $VERSION = '1.02';
 
 use Data::Dumper;
 use base qw(Exporter);
@@ -208,6 +208,11 @@ sub cmp_deeply {
     $tb->is_eq( dump_one_line($ref1), dump_one_line($ref2), $name );
 }
 
+# 0.XX version loaded Log::Any and some adapters relied on this happening
+# behind the scenes.  Since Log::Any now uses this module, we load Log::Any
+# via require after compilation to mitigate circularity.
+require Log::Any;
+
 1;
 
 
@@ -225,7 +230,7 @@ Log::Any::Adapter::Util - Common utility functions for Log::Any
 
 =head1 VERSION
 
-version 1.01
+version 1.02
 
 =head1 DESCRIPTION
 
