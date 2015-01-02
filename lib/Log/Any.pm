@@ -5,7 +5,7 @@ use warnings;
 package Log::Any;
 
 # ABSTRACT: Bringing loggers and listeners together
-our $VERSION = '1.02';
+our $VERSION = '1.03';
 
 use Carp ();
 use Log::Any::Manager;
@@ -119,7 +119,7 @@ Log::Any - Bringing loggers and listeners together
 
 =head1 VERSION
 
-version 1.02
+version 1.03
 
 =head1 SYNOPSIS
 
@@ -247,7 +247,7 @@ on messages to the L<Log::Any::Adapter> handling its category.
 
 =head2 Logging
 
-To log a message, use any of the log levels or aliases. e.g.
+To log a message, pass a single string to any of the log levels or aliases. e.g.
 
     $log->error("this is an error");
     $log->warn("this is a warning");
